@@ -1,5 +1,6 @@
 import React from 'react';
-import { Calendar, LayoutGrid, Settings, Moon, Sun } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Calendar, LayoutGrid, Settings, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,10 @@ export function Header({
   onToggleCyclePhases,
   onOpenSettings,
 }: HeaderProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isBrainDumpPage = location.pathname === '/brain-dump';
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -34,23 +39,38 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant={showCyclePhases ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={onToggleCyclePhases}
-            className="gap-1.5 text-xs"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Cycle View
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={onOpenSettings}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          {!isBrainDumpPage && (
+            <>
+              <Button
+                variant={showCyclePhases ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={onToggleCyclePhases}
+                className="gap-1.5 text-xs"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Cycle View
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/brain-dump')}
+                className="gap-1.5 text-xs"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Brain Dump
+              </Button>
+            </>
+          )}
+          {!isBrainDumpPage && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={onOpenSettings}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </header>
