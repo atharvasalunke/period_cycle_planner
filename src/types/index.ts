@@ -58,5 +58,8 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: Date;
   avatarUrl?: string;
 }

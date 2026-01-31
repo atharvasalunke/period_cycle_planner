@@ -8,8 +8,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 const SignUp = () => {
-    const [name, setName] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +20,7 @@ const SignUp = () => {
 
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !email || !password || !confirmPassword) {
+        if (!firstName || !lastName || !email || !password || !confirmPassword || !dateOfBirth) {
             toast.error('Please fill in all fields');
             return;
         }
@@ -35,7 +37,7 @@ const SignUp = () => {
 
         try {
             setIsLoading(true);
-            await signup(email, password, name);
+            await signup(email, password, firstName, lastName, dateOfBirth);
             toast.success('Account created successfully!');
             navigate('/');
         } catch (error) {
@@ -51,19 +53,35 @@ const SignUp = () => {
             subtitle="Join to start tracking your cycle and productivity"
         >
             <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                        id="name"
-                        type="text"
-                        placeholder="Jane Doe"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={isLoading}
-                        className="rounded-xl border-muted-foreground/20 focus-visible:ring-primary"
-                        required
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                            id="firstName"
+                            type="text"
+                            placeholder="Jane"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            disabled={isLoading}
+                            className="rounded-xl border-muted-foreground/20 focus-visible:ring-primary"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                            id="lastName"
+                            type="text"
+                            placeholder="Doe"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            disabled={isLoading}
+                            className="rounded-xl border-muted-foreground/20 focus-visible:ring-primary"
+                            required
+                        />
+                    </div>
                 </div>
+
                 <div className="space-y-2">
                     <Label htmlFor="email">Email address</Label>
                     <Input
@@ -77,6 +95,20 @@ const SignUp = () => {
                         required
                     />
                 </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input
+                        id="dateOfBirth"
+                        type="date"
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                        disabled={isLoading}
+                        className="rounded-xl border-muted-foreground/20 focus-visible:ring-primary"
+                        required
+                    />
+                </div>
+
                 <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
@@ -110,7 +142,7 @@ const SignUp = () => {
                 >
                     {isLoading ? 'Creating account...' : 'Sign up'}
                 </Button>
-            </form>
+            </form >
 
             <p className="mt-8 text-center text-sm text-muted-foreground">
                 Already have an account?{' '}
@@ -118,7 +150,7 @@ const SignUp = () => {
                     Sign in instead
                 </Link>
             </p>
-        </AuthLayout>
+        </AuthLayout >
     );
 };
 
