@@ -1,8 +1,15 @@
 import { google } from "googleapis";
 
+const requiredIdentityScopes = [
+  "openid",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
+];
+
 const defaultScopes = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.readonly",
+  ...requiredIdentityScopes,
 ];
 
 const getRequiredEnv = (key: string) => {
@@ -18,13 +25,20 @@ const getRequiredEnv = (key: string) => {
 
 const getGoogleScopes = () => {
   const raw = process.env.GOOGLE_SCOPES;
-  if (!raw) {
-    return defaultScopes;
+  const parsed = raw
+    ? raw
+        .split(",")
+        .map((scope) => scope.trim())
+        .filter(Boolean)
+    : defaultScopes;
+
+  for (const scope of requiredIdentityScopes) {
+    if (!parsed.includes(scope)) {
+      parsed.push(scope);
+    }
   }
-  return raw
-    .split(",")
-    .map((scope) => scope.trim())
-    .filter(Boolean);
+
+  return parsed;
 };
 
 const createGoogleOAuthClient = () => {

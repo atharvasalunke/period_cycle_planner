@@ -58,21 +58,43 @@ googleAuthRouter.get("/callback", async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
 
-    // Get user info from Google
-    const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
-    const { data: userInfo } = await oauth2.userinfo.get();
+    if (!tokens.access_token && !tokens.id_token) {
+      return res.status(400).json({
+        error:
+          "Google did not return an access token. Check OAuth client type, redirect URI, and scopes, then retry.",
+      });
+    }
 
-    if (!userInfo.email) {
+    let email: string | undefined;
+    let name: string | undefined;
+
+    if (tokens.id_token) {
+      const ticket = await oauth2Client.verifyIdToken({
+        idToken: tokens.id_token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      email = payload?.email ?? undefined;
+      name = payload?.name ?? undefined;
+    }
+
+    if (!email && tokens.access_token) {
+      const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+      const { data: userInfo } = await oauth2.userinfo.get();
+      email = userInfo.email ?? undefined;
+      name = userInfo.name ?? undefined;
+    }
+
+    if (!email) {
       return res.status(400).json({ error: "Could not retrieve email from Google." });
     }
 
-    // Upsert user
     const user = await prisma.user.upsert({
-      where: { email: userInfo.email },
-      update: { name: userInfo.name },
+      where: { email },
+      update: { name },
       create: {
-        email: userInfo.email,
-        name: userInfo.name,
+        email,
+        name,
       },
     });
 
@@ -83,7 +105,7 @@ googleAuthRouter.get("/callback", async (req, res) => {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
 
     // Redirect back to the frontend with the token.
-    const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173").split(",");
+    const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:8080").split(",");
     const frontendUrl = allowedOrigins[0].trim();
     return res.redirect(`${frontendUrl}/login?token=${token}`);
   } catch (error) {
