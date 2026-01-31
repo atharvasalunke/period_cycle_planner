@@ -8,7 +8,10 @@ const defaultScopes = [
 const getRequiredEnv = (key: string) => {
   const value = process.env[key];
   if (!value) {
-    throw new Error(`Missing required env var: ${key}`);
+    const errorPrefix = key.startsWith("GOOGLE_")
+      ? "Google OAuth Configuration Error: "
+      : "";
+    throw new Error(`${errorPrefix}Missing required environment variable: ${key}. Please check your .env file.`);
   }
   return value;
 };
