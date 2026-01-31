@@ -1,4 +1,6 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Calendar, LayoutGrid, Settings, Sparkles } from 'lucide-react';
 import { Calendar, LayoutGrid, Settings, LogOut, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +25,9 @@ export function Header({
   onToggleCyclePhases,
   onOpenSettings,
 }: HeaderProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isBrainDumpPage = location.pathname === '/brain-dump';
   const { user, logout } = useAuth();
 
   return (
@@ -45,6 +50,38 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2">
+          {!isBrainDumpPage && (
+            <>
+              <Button
+                variant={showCyclePhases ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={onToggleCyclePhases}
+                className="gap-1.5 text-xs"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Cycle View
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/brain-dump')}
+                className="gap-1.5 text-xs"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Brain Dump
+              </Button>
+            </>
+          )}
+          {!isBrainDumpPage && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={onOpenSettings}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant={showCyclePhases ? 'secondary' : 'ghost'}
             size="sm"
