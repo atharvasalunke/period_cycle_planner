@@ -41,17 +41,8 @@ const Login = () => {
         }
     };
 
-    const handleGoogleLogin = async () => {
-        try {
-            setIsLoading(true);
-            await googleLogin();
-            toast.success('Signed in with Google');
-            navigate('/');
-        } catch (error) {
-            toast.error('Google sign-in failed');
-        } finally {
-            setIsLoading(false);
-        }
+    const handleGoogleLogin = () => {
+        googleLogin();
     };
 
     return (
