@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, LayoutGrid, Settings, Sparkles } from 'lucide-react';
-import { Calendar, LayoutGrid, Settings, LogOut, User as UserIcon } from 'lucide-react';
+
+import { Calendar, LayoutGrid, Settings, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import {
