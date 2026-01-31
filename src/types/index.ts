@@ -53,3 +53,10 @@ export interface UserPreferences {
   showExternalEvents: boolean;
   onboardingComplete: boolean;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+}
