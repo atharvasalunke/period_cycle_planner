@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, CheckCircle2, FileText, Lightbulb, X, GripVertical, LayoutGrid, List } from 'lucide-react';
+import { Calendar, Trash2, CheckCircle2, FileText, Lightbulb, X, GripVertical, LayoutGrid, List, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +21,7 @@ interface AiOrganizerPanelProps {
   onDeleteTask: (index: number) => void;
   onReorderTasks: (fromIndex: number, toIndex: number) => void;
   onMoveTask: (taskIndex: number, newCategory: string | null) => void;
+  onVisualize?: () => void;
   clearAfterApply: boolean;
   onClearAfterApplyChange: (value: boolean) => void;
 }
@@ -38,6 +39,7 @@ export function AiOrganizerPanel({
   onDeleteTask,
   onReorderTasks,
   onMoveTask,
+  onVisualize,
   clearAfterApply,
   onClearAfterApplyChange,
 }: AiOrganizerPanelProps) {
@@ -300,6 +302,18 @@ export function AiOrganizerPanel({
         </div>
 
         <div className="flex flex-col gap-2">
+          {onVisualize && (
+            <Button
+              onClick={onVisualize}
+              variant="outline"
+              size="sm"
+              className="w-full border-primary/20 hover:bg-primary/5 text-primary"
+              disabled={!hasTasks}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Visualize on Mixboard
+            </Button>
+          )}
           <Button
             onClick={onApplyToBoard}
             variant="outline"

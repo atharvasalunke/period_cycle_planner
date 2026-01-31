@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import date
 
 
@@ -22,4 +22,22 @@ class OrganizeResponse(BaseModel):
     notes: List[str]
     followUps: List[str]
     suggestions: List[str]
+
+
+class ChatWithTasksRequest(BaseModel):
+    message: str
+    tasks: List[TaskItem]
+    todayISO: str
+    timezone: Optional[str] = "UTC"
+
+
+class TaskUpdate(BaseModel):
+    index: int
+    updates: Dict[str, Any]
+
+
+class ChatWithTasksResponse(BaseModel):
+    response: str
+    newTasks: Optional[List[TaskItem]] = None
+    updatedTasks: Optional[List[TaskUpdate]] = None
 
