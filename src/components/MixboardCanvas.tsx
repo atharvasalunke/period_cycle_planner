@@ -544,45 +544,41 @@ export function MixboardCanvas({
             </marker>
           </defs>
           {connectionArrows.map((arrow) => {
-            // Calculate control points for a smooth, flowy curve
             const dx = arrow.to.x - arrow.from.x;
             const dy = arrow.to.y - arrow.from.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance === 0) return null;
             
-            // Create a wavy/flowy curve using cubic Bezier
-            // Control points create a smooth S-curve with organic flow
-            const curvature = Math.min(distance * 0.4, 200); // Adaptive curvature based on distance
+            // Simple, elegant curve - smooth S-shape
+            // Use a gentle curve that feels natural
+            const curvature = Math.min(distance * 0.25, 120);
             
-            // Perpendicular direction for curve offset (creates the wave)
+            // Perpendicular direction for the curve
             const perpX = -dy / distance;
             const perpY = dx / distance;
             
-            // Add some variation to make it more organic
-            const wave1 = Math.sin(distance * 0.01) * 20; // Subtle wave variation
-            const wave2 = Math.cos(distance * 0.01) * 20;
+            // Simple S-curve with smooth control points
+            // First control: gentle curve away from start
+            const cp1x = arrow.from.x + dx * 0.3 + perpX * curvature;
+            const cp1y = arrow.from.y + dy * 0.3 + perpY * curvature;
             
-            // Control points create a smooth, flowy S-curve path
-            // First control point - curves away from start
-            const cp1x = arrow.from.x + dx * 0.25 + perpX * (curvature * 0.6 + wave1);
-            const cp1y = arrow.from.y + dy * 0.25 + perpY * (curvature * 0.6 + wave1);
-            
-            // Second control point - curves back toward end
-            const cp2x = arrow.from.x + dx * 0.75 - perpX * (curvature * 0.6 + wave2);
-            const cp2y = arrow.from.y + dy * 0.75 - perpY * (curvature * 0.6 + wave2);
+            // Second control: gentle curve back toward end
+            const cp2x = arrow.from.x + dx * 0.7 - perpX * curvature;
+            const cp2y = arrow.from.y + dy * 0.7 - perpY * curvature;
             
             return (
               <path
                 key={arrow.id}
                 d={`M ${arrow.from.x} ${arrow.from.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${arrow.to.x} ${arrow.to.y}`}
                 stroke="#6366f1"
-                strokeWidth="2.5"
+                strokeWidth="2"
                 fill="none"
                 markerEnd="url(#arrowhead)"
                 style={{
-                  filter: 'drop-shadow(0 1px 2px rgba(99, 102, 241, 0.2))',
                   strokeLinecap: 'round',
+                  strokeLinejoin: 'round',
+                  opacity: 0.7,
                 }}
               />
             );
