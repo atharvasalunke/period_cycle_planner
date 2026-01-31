@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, CheckCircle2, FileText, Lightbulb, X, GripVertical } from 'lucide-react';
+import { Calendar, Trash2, CheckCircle2, FileText, Lightbulb, X, GripVertical, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { OrganizeTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { MixboardView } from './MixboardView';
 
 interface AiOrganizerPanelProps {
   tasks: OrganizeTask[];
@@ -19,6 +20,7 @@ interface AiOrganizerPanelProps {
   onUpdateTask: (index: number, task: Partial<OrganizeTask>) => void;
   onDeleteTask: (index: number) => void;
   onReorderTasks: (fromIndex: number, toIndex: number) => void;
+  onMoveTask: (taskIndex: number, newCategory: string | null) => void;
   clearAfterApply: boolean;
   onClearAfterApplyChange: (value: boolean) => void;
 }
@@ -35,9 +37,11 @@ export function AiOrganizerPanel({
   onUpdateTask,
   onDeleteTask,
   onReorderTasks,
+  onMoveTask,
   clearAfterApply,
   onClearAfterApplyChange,
 }: AiOrganizerPanelProps) {
+  const [viewMode, setViewMode] = useState<'mixboard' | 'list'>('mixboard');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -98,19 +102,54 @@ export function AiOrganizerPanel({
             </span>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onReset}
-          className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {hasTasks && (
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'mixboard' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('mixboard')}
+                className="h-7 px-2"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-7 px-2"
+              >
+                <List className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onReset}
+            className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className={cn(
+        "flex-1 overflow-y-auto space-y-6",
+        viewMode === 'mixboard' ? "p-0" : "p-6"
+      )}>
         {/* Detected Tasks */}
-        {hasTasks && (
+        {hasTasks && viewMode === 'mixboard' && (
+          <div className="p-6">
+            <MixboardView
+              tasks={tasks}
+              onUpdateTask={onUpdateTask}
+              onDeleteTask={onDeleteTask}
+              onMoveTask={onMoveTask}
+            />
+          </div>
+        )}
+        {hasTasks && viewMode === 'list' && (
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-4">
               Detected Tasks

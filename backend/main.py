@@ -88,7 +88,28 @@ async def transcribe(audio: UploadFile = File(...)):
     Supports various audio formats: WAV, MP3, M4A, OGG, etc.
     """
     try:
+        print(f"📥 Received audio file: filename={audio.filename}, content_type={audio.content_type}")
         audio_data = await audio.read()
+        
+        print(f"📊 Audio file details:")
+        print(f"   - Size: {len(audio_data)} bytes ({len(audio_data) / 1024:.2f} KB)")
+        print(f"   - Content type: {audio.content_type}")
+        print(f"   - Filename: {audio.filename}")
+        
+        # Log first few bytes for debugging
+        if len(audio_data) > 0:
+            first_bytes = ' '.join(f'{b:02x}' for b in audio_data[:20])
+            print(f"   - First 20 bytes (hex): {first_bytes}")
+            
+            # Check for common audio file signatures
+            if audio_data[:4] == bytes([0x1a, 0x45, 0xdf, 0xa3]):
+                print("   ✅ Detected WebM/Matroska format")
+            elif audio_data[:4] == bytes([0x52, 0x49, 0x46, 0x46]):
+                print("   ✅ Detected WAV/RIFF format")
+            elif audio_data[:2] == bytes([0xff, 0xfb]) or audio_data[:2] == bytes([0xff, 0xf3]):
+                print("   ✅ Detected MP3 format")
+            else:
+                print("   ⚠️ Unknown audio format signature")
         
         # Validate file size (max 3GB per ElevenLabs docs)
         if len(audio_data) > 3 * 1024 * 1024 * 1024:
@@ -104,13 +125,19 @@ async def transcribe(audio: UploadFile = File(...)):
                 detail="Audio file is empty"
             )
         
+        # Warn if very small
+        if len(audio_data) < 5000:
+            print(f"   ⚠️ Warning: Audio file is very small ({len(audio_data)} bytes). Might not contain enough speech.")
+        
         # Run transcription with timeout
         import asyncio
         try:
+            print(f"🔄 Sending to ElevenLabs for transcription...")
             text = await asyncio.wait_for(
                 asyncio.to_thread(transcribe_audio, audio_data),
                 timeout=60.0  # 60 second timeout
             )
+            print(f"✅ Transcription successful: {len(text)} characters")
             return {"text": text}
         except asyncio.TimeoutError:
             raise HTTPException(

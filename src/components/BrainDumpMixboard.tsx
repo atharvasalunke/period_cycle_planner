@@ -7,7 +7,7 @@ import { Task } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
 interface BrainDumpMixboardProps {
-  onAddTasks: (tasks: Omit<Task, 'id' | 'createdAt'>[]) => void;
+  onAddTasks: (task: Omit<Task, 'id' | 'createdAt'>) => void;
 }
 
 export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
@@ -64,6 +64,14 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
       newTasks.splice(toIndex, 0, movedTask);
       return newTasks;
     });
+  };
+
+  const handleMoveTask = (taskIndex: number, newCategory: string | null) => {
+    setOrganizedTasks((prev) =>
+      prev.map((task, i) =>
+        i === taskIndex ? { ...task, category: newCategory } : task
+      )
+    );
   };
 
   const [clearAfterApply, setClearAfterApply] = useState(true);
@@ -186,6 +194,7 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
             onUpdateTask={handleUpdateTask}
             onDeleteTask={handleDeleteTask}
             onReorderTasks={handleReorderTasks}
+            onMoveTask={handleMoveTask}
             clearAfterApply={clearAfterApply}
             onClearAfterApplyChange={setClearAfterApply}
           />
