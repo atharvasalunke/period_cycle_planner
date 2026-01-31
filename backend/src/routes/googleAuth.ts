@@ -92,16 +92,13 @@ googleAuthRouter.get("/callback", async (req, res) => {
       return res.status(400).json({ error: "Could not retrieve email from Google." });
     }
 
-    const name =
-      [firstName, lastName].filter((part) => Boolean(part && part.trim())).join(" ") ||
-      undefined;
-
     const user = await prisma.user.upsert({
       where: { email },
-      update: { name },
+      update: { firstName, lastName },
       create: {
         email,
-        name,
+        firstName,
+        lastName,
       },
     });
 
