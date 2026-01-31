@@ -1,68 +1,280 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* 
+  Design System: Cycle-Aware Planning Tool
+  A calming, modern aesthetic with soft lavender, sage green, and warm neutrals
+  Inspired by wellness apps - promoting calm productivity
+*/
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* Core palette - warm, calming tones */
+    --background: 30 25% 98%;
+    --foreground: 260 20% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 260 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 260 20% 20%;
+
+    /* Primary: Soft lavender - calming but not stereotypical */
+    --primary: 260 45% 65%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 260 45% 92%;
+    --primary-dark: 260 45% 50%;
+
+    /* Secondary: Warm cream/beige */
+    --secondary: 35 30% 94%;
+    --secondary-foreground: 260 20% 25%;
+
+    /* Muted: Soft gray with warmth */
+    --muted: 30 15% 92%;
+    --muted-foreground: 260 10% 45%;
+
+    /* Accent: Sage green - natural, calming */
+    --accent: 150 25% 70%;
+    --accent-foreground: 150 30% 20%;
+    --accent-light: 150 25% 92%;
+
+    --destructive: 0 65% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 20% 88%;
+    --input: 30 20% 90%;
+    --ring: 260 45% 65%;
+
+    --radius: 0.75rem;
+
+    /* Cycle phase colors - soft, non-clinical */
+    --phase-period: 0 55% 75%;
+    --phase-period-light: 0 55% 94%;
+    --phase-follicular: 260 45% 75%;
+    --phase-follicular-light: 260 45% 94%;
+    --phase-ovulation: 150 35% 70%;
+    --phase-ovulation-light: 150 35% 92%;
+    --phase-luteal: 35 40% 75%;
+    --phase-luteal-light: 35 40% 94%;
+
+    /* Task colors */
+    --task-low: 150 30% 70%;
+    --task-medium: 45 70% 65%;
+    --task-high: 0 55% 70%;
+
+    /* Sidebar */
+    --sidebar-background: 30 25% 97%;
+    --sidebar-foreground: 260 20% 25%;
+    --sidebar-primary: 260 45% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 25% 85%;
+    --sidebar-accent-foreground: 150 30% 20%;
+    --sidebar-border: 30 20% 90%;
+    --sidebar-ring: 260 45% 65%;
+
+    /* Gradients */
+    --gradient-calm: linear-gradient(135deg, hsl(260 45% 95%), hsl(150 25% 95%));
+    --gradient-period: linear-gradient(135deg, hsl(0 55% 85%), hsl(0 55% 75%));
+    --gradient-fertile: linear-gradient(135deg, hsl(150 35% 85%), hsl(150 35% 70%));
+    
+    /* Shadows */
+    --shadow-soft: 0 2px 8px -2px hsl(260 20% 20% / 0.08);
+    --shadow-card: 0 4px 16px -4px hsl(260 20% 20% / 0.1);
+    --shadow-elevated: 0 8px 32px -8px hsl(260 20% 20% / 0.15);
   }
-  a:hover {
-    color: #747bff;
+
+  .dark {
+    --background: 260 20% 10%;
+    --foreground: 30 25% 95%;
+
+    --card: 260 18% 14%;
+    --card-foreground: 30 25% 95%;
+
+    --popover: 260 18% 14%;
+    --popover-foreground: 30 25% 95%;
+
+    --primary: 260 45% 70%;
+    --primary-foreground: 260 20% 10%;
+    --primary-light: 260 30% 25%;
+    --primary-dark: 260 45% 80%;
+
+    --secondary: 260 15% 20%;
+    --secondary-foreground: 30 25% 90%;
+
+    --muted: 260 15% 18%;
+    --muted-foreground: 30 15% 60%;
+
+    --accent: 150 25% 40%;
+    --accent-foreground: 150 25% 95%;
+    --accent-light: 150 20% 20%;
+
+    --destructive: 0 55% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 260 15% 22%;
+    --input: 260 15% 20%;
+    --ring: 260 45% 70%;
+
+    --phase-period: 0 45% 55%;
+    --phase-period-light: 0 35% 20%;
+    --phase-follicular: 260 35% 55%;
+    --phase-follicular-light: 260 25% 20%;
+    --phase-ovulation: 150 30% 45%;
+    --phase-ovulation-light: 150 20% 18%;
+    --phase-luteal: 35 35% 50%;
+    --phase-luteal-light: 35 25% 18%;
+
+    --sidebar-background: 260 18% 12%;
+    --sidebar-foreground: 30 25% 90%;
+    --sidebar-primary: 260 45% 70%;
+    --sidebar-primary-foreground: 260 20% 10%;
+    --sidebar-accent: 150 20% 25%;
+    --sidebar-accent-foreground: 150 25% 90%;
+    --sidebar-border: 260 15% 20%;
+    --sidebar-ring: 260 45% 70%;
+
+    --gradient-calm: linear-gradient(135deg, hsl(260 25% 15%), hsl(150 20% 15%));
+    --gradient-period: linear-gradient(135deg, hsl(0 40% 25%), hsl(0 45% 35%));
+    --gradient-fertile: linear-gradient(135deg, hsl(150 25% 20%), hsl(150 30% 30%));
+
+    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-card: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
+    --shadow-elevated: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply backdrop-blur-md bg-card/80;
+  }
+
+  /* Cycle phase indicators */
+  .phase-period {
+    @apply bg-[hsl(var(--phase-period-light))] border-l-4 border-[hsl(var(--phase-period))];
+  }
+
+  .phase-follicular {
+    @apply bg-[hsl(var(--phase-follicular-light))] border-l-4 border-[hsl(var(--phase-follicular))];
+  }
+
+  .phase-ovulation {
+    @apply bg-[hsl(var(--phase-ovulation-light))] border-l-4 border-[hsl(var(--phase-ovulation))];
+  }
+
+  .phase-luteal {
+    @apply bg-[hsl(var(--phase-luteal-light))] border-l-4 border-[hsl(var(--phase-luteal))];
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-calm {
+    background: var(--gradient-calm);
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-0.5;
+    box-shadow: var(--shadow-elevated);
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Pulse for current day */
+  .pulse-soft {
+    animation: pulseSoft 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseSoft {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+    }
   }
 }
