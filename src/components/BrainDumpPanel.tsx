@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Loader2, Mic, MicOff, Square } from 'lucide-react';
+import { Sparkles, Loader2, Mic, MicOff, Square, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { transcribeAudio } from '@/lib/api';
@@ -9,6 +9,8 @@ interface BrainDumpPanelProps {
   text: string;
   onTextChange: (text: string) => void;
   onOrganize: () => void;
+  onImagesChange?: (images: File[]) => void;
+  images?: File[];
   isLoading: boolean;
 }
 
@@ -16,12 +18,15 @@ export function BrainDumpPanel({
   text,
   onTextChange,
   onOrganize,
+  onImagesChange,
+  images = [],
   isLoading,
 }: BrainDumpPanelProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -195,6 +200,27 @@ export function BrainDumpPanel({
     setIsRecording(false);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !onImagesChange) return;
+
+    const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
+    if (imageFiles.length > 0) {
+      onImagesChange([...images, ...imageFiles]);
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    if (onImagesChange) {
+      onImagesChange(images.filter((_, i) => i !== index));
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden flex flex-col min-h-[600px]">
       {/* Minimal header */}
@@ -213,7 +239,28 @@ export function BrainDumpPanel({
           disabled={isLoading || isTranscribing}
         />
 
-        {/* Voice recording controls */}
+        {/* Image upload area */}
+        {images.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+            {images.map((image, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={URL.createObjectURL(image)}
+                  alt={`Upload ${index + 1}`}
+                  className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                />
+                <button
+                  onClick={() => handleRemoveImage(index)}
+                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Voice recording and image upload controls */}
         <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
           {!isRecording ? (
             <Button
@@ -238,6 +285,28 @@ export function BrainDumpPanel({
             </Button>
           )}
           
+          {onImagesChange && (
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || isTranscribing}
+              variant="outline"
+              size="sm"
+              className="gap-2 border-gray-200"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Images
+            </Button>
+          )}
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          
           {isTranscribing && (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -255,12 +324,19 @@ export function BrainDumpPanel({
 
         {/* Bottom action bar */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400">
-            {text.length > 0 ? `${text.length} characters` : 'Start typing or speaking...'}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-gray-400">
+              {text.length > 0 ? `${text.length} characters` : 'Start typing or speaking...'}
+            </p>
+            {images.length > 0 && (
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                {images.length} image{images.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <Button
             onClick={onOrganize}
-            disabled={!text.trim() || isLoading || isTranscribing}
+            disabled={(!text.trim() && images.length === 0) || isLoading || isTranscribing}
             className="gap-2 bg-primary hover:bg-primary/90"
             size="lg"
           >

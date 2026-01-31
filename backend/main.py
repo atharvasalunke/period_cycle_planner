@@ -2,8 +2,8 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from dotenv import load_dotenv
-from schemas import OrganizeRequest, OrganizeResponse
-from gemini_client import organize_text
+from schemas import OrganizeRequest, OrganizeResponse, ChatWithTasksRequest, ChatWithTasksResponse
+from gemini_client import organize_text, chat_with_tasks
 from elevenlabs_client import transcribe_audio
 
 # Load environment variables
@@ -36,6 +36,7 @@ async def organize(request: OrganizeRequest):
     """
     Organize messy text into structured tasks and notes using Gemini AI.
     Text can come from typing or voice transcription (via ElevenLabs).
+    Images are handled client-side for visualization only, not sent to Gemini.
     """
     try:
         print(f"Received organize request: text length={len(request.text)}, today={request.todayISO}")
@@ -56,7 +57,7 @@ async def organize(request: OrganizeRequest):
                 detail="Text cannot be empty"
             )
         
-        # Call Gemini to organize (works for both typed and transcribed text)
+        # Call Gemini to organize text only (images are for visualization only)
         result = organize_text(
             text=request.text.strip(),
             today_iso=request.todayISO,
@@ -152,6 +153,56 @@ async def transcribe(audio: UploadFile = File(...)):
         raise HTTPException(
             status_code=500,
             detail=f"Transcription error: {str(e)}"
+        )
+
+
+@app.post("/chat-tasks", response_model=ChatWithTasksResponse)
+async def chat_tasks(request: ChatWithTasksRequest):
+    """
+    Chat with Gemini about existing tasks. Can answer questions, suggest updates, or create new tasks.
+    """
+    try:
+        print(f"Received chat request: message length={len(request.message)}, tasks={len(request.tasks)}")
+        
+        # Validate date format
+        try:
+            datetime.strptime(request.todayISO, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid date format. Use YYYY-MM-DD"
+            )
+        
+        # Validate message is not empty
+        if not request.message or not request.message.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Message cannot be empty"
+            )
+        
+        # Call Gemini to chat about tasks
+        result = chat_with_tasks(
+            message=request.message.strip(),
+            tasks=request.tasks,
+            today_iso=request.todayISO,
+            timezone=request.timezone or "UTC"
+        )
+        
+        print(f"Chat complete: response length={len(result.response)}")
+        return result
+        
+    except ValueError as e:
+        print(f"ValueError: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
         )
 
 

@@ -28,6 +28,7 @@ export async function organizeText(
   todayISO: string,
   timezone: string = 'UTC'
 ): Promise<OrganizeResponse> {
+  // Only send text to Gemini, images are for visualization only
   const response = await fetch(`${API_BASE_URL}/organize`, {
     method: 'POST',
     headers: {
@@ -35,6 +36,46 @@ export async function organizeText(
     },
     body: JSON.stringify({
       text,
+      todayISO,
+      timezone,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export interface ChatWithTasksRequest {
+  message: string;
+  tasks: OrganizeTask[];
+  todayISO: string;
+  timezone?: string;
+}
+
+export interface ChatWithTasksResponse {
+  response: string;
+  newTasks?: OrganizeTask[];
+  updatedTasks?: Array<{ index: number; updates: Partial<OrganizeTask> }>;
+}
+
+export async function chatWithTasks(
+  message: string,
+  tasks: OrganizeTask[],
+  todayISO: string,
+  timezone: string = 'UTC'
+): Promise<ChatWithTasksResponse> {
+  const response = await fetch(`${API_BASE_URL}/chat-tasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message,
+      tasks,
       todayISO,
       timezone,
     }),

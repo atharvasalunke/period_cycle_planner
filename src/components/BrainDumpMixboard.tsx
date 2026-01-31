@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { BrainDumpPanel } from './BrainDumpPanel';
 import { AiOrganizerPanel } from './AiOrganizerPanel';
+import { MixboardCanvas } from './MixboardCanvas';
 import { organizeText, OrganizeTask } from '@/lib/api';
 import { Task } from '@/types';
 import { toast } from '@/hooks/use-toast';
@@ -12,11 +13,13 @@ interface BrainDumpMixboardProps {
 
 export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
   const [brainDumpText, setBrainDumpText] = useState('');
+  const [images, setImages] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [organizedTasks, setOrganizedTasks] = useState<OrganizeTask[]>([]);
   const [notes, setNotes] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [followUps, setFollowUps] = useState<string[]>([]);
+  const [showVisualization, setShowVisualization] = useState(false);
 
   const handleOrganize = async () => {
     if (!brainDumpText.trim()) return;
@@ -24,7 +27,8 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
     setIsLoading(true);
     try {
       const todayISO = format(new Date(), 'yyyy-MM-dd');
-      const response = await organizeText(brainDumpText, todayISO);
+      // Only send text to Gemini, images are for visualization only
+      const response = await organizeText(brainDumpText, todayISO, 'UTC');
 
       setOrganizedTasks(response.tasks);
       setNotes(response.notes);
@@ -139,11 +143,35 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
 
   const handleReset = () => {
     setBrainDumpText('');
+    setImages([]);
     setOrganizedTasks([]);
     setNotes([]);
     setSuggestions([]);
     setFollowUps([]);
+    setShowVisualization(false);
   };
+
+  if (showVisualization) {
+    return (
+      <div className="w-full h-[calc(100vh-200px)] relative">
+        <MixboardCanvas
+          tasks={organizedTasks}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
+          onAddTasks={(newTasks) => setOrganizedTasks((prev) => [...prev, ...newTasks])}
+          uploadedImages={images}
+        />
+        <div className="absolute top-4 right-4 z-50">
+          <button
+            onClick={() => setShowVisualization(false)}
+            className="bg-white rounded-lg shadow-lg border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            Back to List
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto">
@@ -155,6 +183,8 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
             text={brainDumpText}
             onTextChange={setBrainDumpText}
             onOrganize={handleOrganize}
+            onImagesChange={setImages}
+            images={images}
             isLoading={isLoading}
           />
         </div>
@@ -195,6 +225,7 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
             onDeleteTask={handleDeleteTask}
             onReorderTasks={handleReorderTasks}
             onMoveTask={handleMoveTask}
+            onVisualize={() => setShowVisualization(true)}
             clearAfterApply={clearAfterApply}
             onClearAfterApplyChange={setClearAfterApply}
           />
