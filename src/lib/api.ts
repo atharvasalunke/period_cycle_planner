@@ -48,3 +48,39 @@ export async function organizeText(
   return response.json();
 }
 
+export async function transcribeAudio(audioBlob: Blob): Promise<string> {
+  const formData = new FormData();
+  formData.append('audio', audioBlob, 'recording.wav');
+
+  // Add timeout to prevent hanging
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/transcribe`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(error.detail || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text || '';
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Transcription timeout. Please try with a shorter recording.');
+      }
+      throw error;
+    }
+    throw new Error('Failed to transcribe audio');
+  }
+}
+

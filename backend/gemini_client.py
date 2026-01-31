@@ -1,6 +1,6 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
 from typing import Dict, Any
 from prompts import SYSTEM_PROMPT, build_user_prompt
 from schemas import OrganizeResponse, TaskItem
@@ -8,30 +8,12 @@ from schemas import OrganizeResponse, TaskItem
 
 def get_gemini_client():
     """Initialize Gemini client with API key from environment."""
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
+    # The client gets the API key from the environment variable `GEMINI_API_KEY`
+    if not os.getenv("GEMINI_API_KEY"):
         raise ValueError("GEMINI_API_KEY environment variable is required")
     
-    genai.configure(api_key=api_key)
-    # List available models to find one that works
-    try:
-        models = genai.list_models()
-        for model in models:
-            if 'generateContent' in model.supported_generation_methods:
-                # Use the first available model that supports generateContent
-                model_name = model.name.replace('models/', '')
-                return genai.GenerativeModel(model_name)
-    except Exception as e:
-        print(f"Error listing models: {e}")
-    
-    # Fallback: try common model names
-    for model_name in ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro']:
-        try:
-            return genai.GenerativeModel(model_name)
-        except:
-            continue
-    
-    raise ValueError("No available Gemini models found. Please check your API key and model access.")
+    client = genai.Client()
+    return client
 
 
 def parse_gemini_response(response_text: str) -> Dict[str, Any]:
@@ -69,7 +51,7 @@ def organize_text(text: str, today_iso: str, timezone: str = "UTC") -> OrganizeR
     Call Gemini API to organize messy text into structured tasks and notes.
     
     Args:
-        text: User's brain dump text
+        text: User's brain dump text (can come from typing or voice transcription)
         today_iso: Today's date in YYYY-MM-DD format
         timezone: Timezone string (default: UTC)
     
@@ -77,43 +59,92 @@ def organize_text(text: str, today_iso: str, timezone: str = "UTC") -> OrganizeR
         OrganizeResponse with tasks, notes, followUps, and suggestions
     """
     try:
-        model = get_gemini_client()
+        print(f"Organizing text (length: {len(text)}), today: {today_iso}")
+        
+        # Initialize client (gets API key from GEMINI_API_KEY env var)
+        if not os.getenv("GEMINI_API_KEY"):
+            raise ValueError("GEMINI_API_KEY environment variable is required")
+        
+        client = genai.Client()
         
         user_prompt = build_user_prompt(text, today_iso)
+        full_prompt = f"{SYSTEM_PROMPT}\n\n{user_prompt}"
         
-        # Call Gemini
-        response = model.generate_content(
-            f"{SYSTEM_PROMPT}\n\n{user_prompt}",
-            generation_config={
-                "temperature": 0.3,
-                "max_output_tokens": 2048,
-            }
+        # Use gemini-1.5-flash (most commonly available 1.5 model)
+        model_name = 'gemini-2.5-flash'
+        
+        print(f"Using model: {model_name}")
+        print("Calling Gemini API...")
+        print(f"Prompt length: {len(full_prompt)} characters")
+        
+        # Use generate_content with proper error handling
+        response = client.models.generate_content(
+            model=model_name,
+            contents=full_prompt
         )
         
-        # Parse response
+        print(f"Got response from Gemini ({model_name})")
+        
+        # Parse response - new API returns response with .text attribute
+        if not response:
+            raise ValueError("Empty response from Gemini")
+        
+        # Get text from response
         response_text = response.text
+        
+        if not response_text or not response_text.strip():
+            raise ValueError("Empty or invalid response text from Gemini")
+        
+        print(f"Response text length: {len(response_text)}")
+        print(f"Response preview: {response_text[:300]}...")
+        
         parsed = parse_gemini_response(response_text)
+        print(f"Parsed response: {len(parsed.get('tasks', []))} tasks")
         
         # Validate and structure response
-        tasks = [
-            TaskItem(**task) for task in parsed.get("tasks", [])
-        ]
+        tasks = []
+        for task_data in parsed.get("tasks", []):
+            try:
+                # Ensure all required fields have defaults
+                task_dict = {
+                    "title": task_data.get("title", ""),
+                    "dueDateISO": task_data.get("dueDateISO"),
+                    "confidence": task_data.get("confidence", 0.8),
+                    "category": task_data.get("category"),
+                    "sourceSpan": task_data.get("sourceSpan"),
+                }
+                # Validate confidence is between 0 and 1
+                if task_dict["confidence"] < 0:
+                    task_dict["confidence"] = 0.0
+                elif task_dict["confidence"] > 1:
+                    task_dict["confidence"] = 1.0
+                
+                tasks.append(TaskItem(**task_dict))
+            except Exception as task_error:
+                print(f"Error creating task item: {task_error}, task_data: {task_data}")
+                # Skip invalid tasks but continue processing
+                continue
         
-        # Ensure all required fields exist
+        # Ensure all required fields exist with defaults
         result = OrganizeResponse(
             tasks=tasks,
-            notes=parsed.get("notes", []),
-            followUps=parsed.get("followUps", []),
-            suggestions=parsed.get("suggestions", [])
+            notes=parsed.get("notes", []) or [],
+            followUps=parsed.get("followUps", []) or [],
+            suggestions=parsed.get("suggestions", []) or []
         )
         
+        print(f"Successfully organized with {model_name}: {len(tasks)} tasks")
         return result
         
     except Exception as e:
-        # Return empty response on error
+        import traceback
+        error_msg = str(e)
+        print(f"Error in organize_text: {error_msg}")
+        traceback.print_exc()
+        # Return error in notes so user can see what went wrong
         return OrganizeResponse(
             tasks=[],
-            notes=[f"Error processing: {str(e)}"],
+            notes=[f"Error processing: {error_msg}"],
             followUps=[],
             suggestions=[]
         )
