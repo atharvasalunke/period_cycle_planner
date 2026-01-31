@@ -7,7 +7,7 @@ interface AuthContextType {
     user: User | null;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    signup: (email: string, password: string, name: string) => Promise<void>;
+    signup: (email: string, password: string, firstName: string, lastName: string, dateOfBirth: string) => Promise<void>;
     googleLogin: () => void;
     logout: () => void;
 }
@@ -90,13 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const signup = async (email: string, password: string, name: string) => {
+    const signup = async (email: string, password: string, firstName: string, lastName: string, dateOfBirth: string) => {
         setIsLoading(true);
         try {
             const response = await fetch(`${API_BASE_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, name }),
+                body: JSON.stringify({ email, password, firstName, lastName, dateOfBirth }),
             });
 
             const data = await response.json();
