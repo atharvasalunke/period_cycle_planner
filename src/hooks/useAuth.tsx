@@ -1,84 +1,130 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
     signup: (email: string, password: string, name: string) => Promise<void>;
-    googleLogin: () => Promise<void>;
+    googleLogin: () => void;
     logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const API_BASE_URL = 'http://localhost:4000';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
-        // Check for stored session
-        const storedUser = localStorage.getItem('auth-user');
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error('Failed to parse stored user', e);
+        const initAuth = async () => {
+            const token = localStorage.getItem('auth-token');
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenFromUrl = urlParams.get('token');
+
+            const activeToken = tokenFromUrl || token;
+
+            if (activeToken) {
+                if (tokenFromUrl) {
+                    localStorage.setItem('auth-token', tokenFromUrl);
+                    // Clean up URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                        headers: {
+                            'Authorization': `Bearer ${activeToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUser(data.user);
+
+                        // If we're on the login page and just got a token from URL (Google Login)
+                        if (tokenFromUrl && window.location.pathname === '/login') {
+                            navigate('/', { replace: true });
+                        }
+                    } else {
+                        localStorage.removeItem('auth-token');
+                    }
+                } catch (error) {
+                    console.error('Failed to verify session', error);
+                }
             }
-        }
-        setIsLoading(false);
-    }, []);
+            setIsLoading(false);
+        };
+
+        initAuth();
+    }, [navigate]);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true);
-        // Mock API call delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
 
-        const mockUser: User = {
-            id: '1',
-            email,
-            name: email.split('@')[0],
-        };
+            const data = await response.json();
 
-        setUser(mockUser);
-        localStorage.setItem('auth-user', JSON.stringify(mockUser));
-        setIsLoading(false);
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
+            }
+
+            setUser(data.user);
+            localStorage.setItem('auth-token', data.token);
+            navigate('/', { replace: true });
+        } catch (error: any) {
+            toast.error(error.message);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const signup = async (email: string, password: string, name: string) => {
         setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, name }),
+            });
 
-        const mockUser: User = {
-            id: Math.random().toString(36).substr(2, 9),
-            email,
-            name,
-        };
+            const data = await response.json();
 
-        setUser(mockUser);
-        localStorage.setItem('auth-user', JSON.stringify(mockUser));
-        setIsLoading(false);
+            if (!response.ok) {
+                throw new Error(data.error || 'Signup failed');
+            }
+
+            setUser(data.user);
+            localStorage.setItem('auth-token', data.token);
+            navigate('/', { replace: true });
+        } catch (error: any) {
+            toast.error(error.message);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const googleLogin = async () => {
-        setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-
-        const mockUser: User = {
-            id: 'google-123',
-            email: 'google.user@gmail.com',
-            name: 'Google User',
-            avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-        };
-
-        setUser(mockUser);
-        localStorage.setItem('auth-user', JSON.stringify(mockUser));
-        setIsLoading(false);
+    const googleLogin = () => {
+        // Start Google OAuth flow via backend redirect
+        window.location.href = `${API_BASE_URL}/auth/google/start`;
     };
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('auth-user');
+        localStorage.removeItem('auth-token');
+        navigate('/login', { replace: true });
     };
 
     return (

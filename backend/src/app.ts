@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 
+import { authRouter } from "./routes/auth.js";
 import { googleAuthRouter } from "./routes/googleAuth.js";
 import { googleCalendarRouter } from "./routes/googleCalendar.js";
 import { healthRouter } from "./routes/health.js";
@@ -21,6 +22,7 @@ app.use(
 app.use(express.json());
 
 app.use("/health", healthRouter);
+app.use("/auth", authRouter);
 app.use("/auth/google", googleAuthRouter);
 app.use("/google/calendar", googleCalendarRouter);
 
