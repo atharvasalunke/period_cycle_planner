@@ -66,7 +66,8 @@ googleAuthRouter.get("/callback", async (req, res) => {
     }
 
     let email: string | undefined;
-    let name: string | undefined;
+    let firstName: string | undefined;
+    let lastName: string | undefined;
 
     if (tokens.id_token) {
       const ticket = await oauth2Client.verifyIdToken({
@@ -75,14 +76,16 @@ googleAuthRouter.get("/callback", async (req, res) => {
       });
       const payload = ticket.getPayload();
       email = payload?.email ?? undefined;
-      name = payload?.name ?? undefined;
+      firstName = payload?.given_name ?? undefined;
+      lastName = payload?.family_name ?? undefined;
     }
 
     if (!email && tokens.access_token) {
       const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
       const { data: userInfo } = await oauth2.userinfo.get();
       email = userInfo.email ?? undefined;
-      name = userInfo.name ?? undefined;
+      firstName = userInfo.given_name ?? undefined;
+      lastName = userInfo.family_name ?? undefined;
     }
 
     if (!email) {
@@ -91,10 +94,11 @@ googleAuthRouter.get("/callback", async (req, res) => {
 
     const user = await prisma.user.upsert({
       where: { email },
-      update: { name },
+      update: { firstName, lastName },
       create: {
         email,
-        name,
+        firstName,
+        lastName,
       },
     });
 
