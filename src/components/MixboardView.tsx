@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar, Trash2, GripVertical, Plus, X } from 'lucide-react';
+import { Calendar, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrganizeTask } from '@/lib/api';
