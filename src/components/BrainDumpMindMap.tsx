@@ -16,7 +16,7 @@ interface BrainDumpMindMapProps {
 }
 
 export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
-  const { cycleSettings } = useCycleData();
+  const { cycleSettings, todayPhase } = useCycleData();
   const { createTask: createGoogleTask } = useGoogleTasks();
   const [brainDumpText, setBrainDumpText] = useState('');
   const [images, setImages] = useState<File[]>([]);
@@ -204,6 +204,8 @@ export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
             onImagesChange={setImages}
             images={images}
             isLoading={isLoading}
+            cyclePhase={todayPhase?.phase}
+            dayOfCycle={todayPhase?.dayOfCycle}
           />
         </div>
 
