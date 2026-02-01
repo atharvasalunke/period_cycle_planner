@@ -4,29 +4,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrganizeTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { CycleSettings } from '@/types';
+import { getCyclePhase } from '@/lib/cycle-utils';
 
-interface MixboardViewProps {
+interface MindMapViewProps {
   tasks: OrganizeTask[];
   onUpdateTask: (index: number, task: Partial<OrganizeTask>) => void;
   onDeleteTask: (index: number) => void;
   onMoveTask: (taskIndex: number, newCategory: string | null) => void;
+  cycleSettings?: CycleSettings | null;
 }
+
+const phaseDots: Record<string, string> = {
+  period: 'bg-phase-period',
+  follicular: 'bg-phase-follicular',
+  ovulation: 'bg-phase-ovulation',
+  luteal: 'bg-phase-luteal',
+};
 
 const CATEGORIES = [
   { id: 'work', label: 'Work', color: 'bg-blue-50 border-blue-200 text-blue-700' },
   { id: 'personal', label: 'Personal', color: 'bg-purple-50 border-purple-200 text-purple-700' },
   { id: 'health', label: 'Health', color: 'bg-green-50 border-green-200 text-green-700' },
   { id: 'school', label: 'School', color: 'bg-orange-50 border-orange-200 text-orange-700' },
+  { id: 'shopping', label: 'Shopping', color: 'bg-pink-50 border-pink-200 text-pink-700' },
+  { id: 'finance', label: 'Finance', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
+  { id: 'social', label: 'Social', color: 'bg-indigo-50 border-indigo-200 text-indigo-700' },
+  { id: 'creative', label: 'Creative', color: 'bg-rose-50 border-rose-200 text-rose-700' },
   { id: 'other', label: 'Other', color: 'bg-gray-50 border-gray-200 text-gray-700' },
   { id: null, label: 'Uncategorized', color: 'bg-slate-50 border-slate-200 text-slate-700' },
 ];
 
-export function MixboardView({
+export function MindMapView({
   tasks,
   onUpdateTask,
   onDeleteTask,
   onMoveTask,
-}: MixboardViewProps) {
+  cycleSettings,
+}: MindMapViewProps) {
   const [draggedTaskIndex, setDraggedTaskIndex] = useState<number | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
 
@@ -37,6 +52,10 @@ export function MixboardView({
       personal: [],
       health: [],
       school: [],
+      shopping: [],
+      finance: [],
+      social: [],
+      creative: [],
       other: [],
       uncategorized: [],
     };
@@ -88,11 +107,13 @@ export function MixboardView({
 
   return (
     <div 
-      className="flex gap-4 overflow-x-auto pb-4" 
-      style={{ minHeight: '500px' }}
+      className="flex gap-4 overflow-x-auto pb-4 w-full" 
+      style={{ minHeight: '500px', width: 'max-content' }}
     >
       {CATEGORIES.map((category) => {
-        const categoryTasks = tasksByCategory[category.id || 'uncategorized'] || [];
+        // Always show all categories, even if empty
+        const categoryKey = category.id || 'uncategorized';
+        const categoryTasks = tasksByCategory[categoryKey] || [];
         const isDraggingOver = dragOverCategory === category.id;
 
         return (
@@ -162,6 +183,15 @@ export function MixboardView({
                           className="text-xs h-7 border-gray-200 bg-white"
                           onDragStart={(e) => e.stopPropagation()}
                         />
+                        {cycleSettings && task.dueDateISO && (
+                          <span
+                            className={cn(
+                              'h-2 w-2 rounded-full',
+                              phaseDots[getCyclePhase(new Date(task.dueDateISO), cycleSettings).phase] || 'bg-muted-foreground'
+                            )}
+                            title={`${getCyclePhase(new Date(task.dueDateISO), cycleSettings).phase.charAt(0).toUpperCase() + getCyclePhase(new Date(task.dueDateISO), cycleSettings).phase.slice(1)} phase`}
+                          />
+                        )}
                       </div>
                     )}
                   </div>

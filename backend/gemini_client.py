@@ -9,11 +9,11 @@ from typing import Dict, Any
 
 def get_gemini_client():
     """Initialize Gemini client with API key from environment."""
-    # The client gets the API key from the environment variable `GEMINI_API_KEY`
-    if not os.getenv("GEMINI_API_KEY"):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
         raise ValueError("GEMINI_API_KEY environment variable is required")
     
-    client = genai.Client()
+    client = genai.Client(api_key=api_key)
     return client
 
 
@@ -47,7 +47,7 @@ def parse_gemini_response(response_text: str) -> Dict[str, Any]:
         raise ValueError(f"Failed to parse JSON from Gemini response: {e}")
 
 
-def organize_text(text: str, today_iso: str, timezone: str = "UTC") -> OrganizeResponse:
+def organize_text(text: str, today_iso: str, timezone: str = "UTC", cycle_phase_calendar: list = None) -> OrganizeResponse:
     """
     Call Gemini API to organize messy text into structured tasks and notes.
     
@@ -63,12 +63,13 @@ def organize_text(text: str, today_iso: str, timezone: str = "UTC") -> OrganizeR
         print(f"Organizing text (length: {len(text)}), today: {today_iso}")
         
         # Initialize client (gets API key from GEMINI_API_KEY env var)
-        if not os.getenv("GEMINI_API_KEY"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
         
-        client = genai.Client()
+        client = genai.Client(api_key=api_key)
         
-        user_prompt = build_user_prompt(text, today_iso)
+        user_prompt = build_user_prompt(text, today_iso, cycle_phase_calendar)
         full_prompt = f"{SYSTEM_PROMPT}\n\n{user_prompt}"
         
         # Use gemini-1.5-flash (most commonly available 1.5 model)
@@ -107,11 +108,18 @@ def organize_text(text: str, today_iso: str, timezone: str = "UTC") -> OrganizeR
         for task_data in parsed.get("tasks", []):
             try:
                 # Ensure all required fields have defaults
+                category = task_data.get("category")
+                # If category is missing or invalid, default to "other"
+                valid_categories = ["work", "personal", "health", "school", "shopping", "finance", "social", "creative", "other"]
+                if not category or category not in valid_categories:
+                    category = "other"
+                    print(f"Warning: Task '{task_data.get('title', 'unknown')}' had invalid/missing category, defaulting to 'other'")
+                
                 task_dict = {
                     "title": task_data.get("title", ""),
                     "dueDateISO": task_data.get("dueDateISO"),
                     "confidence": task_data.get("confidence", 0.8),
-                    "category": task_data.get("category"),
+                    "category": category,
                     "sourceSpan": task_data.get("sourceSpan"),
                 }
                 # Validate confidence is between 0 and 1
@@ -173,10 +181,11 @@ def organize_with_images(
         print(f"Organizing text (length: {len(text)}) with {len(images)} images, today: {today_iso}")
         
         # Initialize client
-        if not os.getenv("GEMINI_API_KEY"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
         
-        client = genai.Client()
+        client = genai.Client(api_key=api_key)
         
         user_prompt = build_user_prompt(text, today_iso)
         full_prompt = f"{SYSTEM_PROMPT}\n\n{user_prompt}"
@@ -285,10 +294,11 @@ def chat_with_tasks(
         print(f"Chatting with Gemini about {len(tasks)} tasks, message: {message[:100]}...")
         
         # Initialize client
-        if not os.getenv("GEMINI_API_KEY"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
         
-        client = genai.Client()
+        client = genai.Client(api_key=api_key)
         
         # Build context about existing tasks
         tasks_context = "\n".join([

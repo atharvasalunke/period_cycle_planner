@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { BrainDumpPanel } from './BrainDumpPanel';
 import { AiOrganizerPanel } from './AiOrganizerPanel';
-import { MixboardCanvas } from './MixboardCanvas';
+import { MindMapCanvas } from './MindMapCanvas';
 import { organizeText, OrganizeTask } from '@/lib/api';
-import { Task } from '@/types';
+import { Task, CycleSettings } from '@/types';
 import { toast } from '@/hooks/use-toast';
+import { useCycleData } from '@/hooks/useCycleData';
+import { getCyclePhase } from '@/lib/cycle-utils';
 
-interface BrainDumpMixboardProps {
+interface BrainDumpMindMapProps {
   onAddTasks: (task: Omit<Task, 'id' | 'createdAt'>) => void;
 }
 
-export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
+export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
+  const { cycleSettings } = useCycleData();
   const [brainDumpText, setBrainDumpText] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,8 +30,24 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
     setIsLoading(true);
     try {
       const todayISO = format(new Date(), 'yyyy-MM-dd');
+      // Get cycle phase calendar for the next 60 days so Gemini knows what phase each date will be in
+      let cyclePhaseCalendar: Array<{ date: string; phase: string; dayOfCycle: number }> | undefined;
+      if (cycleSettings) {
+        const today = new Date();
+        cyclePhaseCalendar = [];
+        for (let i = 0; i < 60; i++) {
+          const date = new Date(today);
+          date.setDate(date.getDate() + i);
+          const phaseInfo = getCyclePhase(date, cycleSettings);
+          cyclePhaseCalendar.push({
+            date: format(date, 'yyyy-MM-dd'),
+            phase: phaseInfo.phase,
+            dayOfCycle: phaseInfo.dayOfCycle,
+          });
+        }
+      }
       // Only send text to Gemini, images are for visualization only
-      const response = await organizeText(brainDumpText, todayISO, 'UTC');
+      const response = await organizeText(brainDumpText, todayISO, 'UTC', cyclePhaseCalendar);
 
       setOrganizedTasks(response.tasks);
       setNotes(response.notes);
@@ -154,12 +173,13 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
   if (showVisualization) {
     return (
       <div className="w-full h-[calc(100vh-200px)] relative">
-        <MixboardCanvas
+        <MindMapCanvas
           tasks={organizedTasks}
           onUpdateTask={handleUpdateTask}
           onDeleteTask={handleDeleteTask}
           onAddTasks={(newTasks) => setOrganizedTasks((prev) => [...prev, ...newTasks])}
           uploadedImages={images}
+          cycleSettings={cycleSettings}
         />
         <div className="absolute top-4 right-4 z-50">
           <button
@@ -175,7 +195,7 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
 
   return (
     <div className="max-w-[1400px] mx-auto">
-      {/* Mixboard-style horizontal flow */}
+      {/* Mind Map-style horizontal flow */}
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Left: Brain Dump Input */}
         <div className="flex-1 min-w-0">
@@ -211,7 +231,7 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
         )}
 
         {/* Right: AI Organized Results */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 max-w-[600px] lg:max-w-[700px]">
           <AiOrganizerPanel
             tasks={organizedTasks}
             notes={notes}
@@ -228,6 +248,7 @@ export function BrainDumpMixboard({ onAddTasks }: BrainDumpMixboardProps) {
             onVisualize={() => setShowVisualization(true)}
             clearAfterApply={clearAfterApply}
             onClearAfterApplyChange={setClearAfterApply}
+            cycleSettings={cycleSettings}
           />
         </div>
       </div>
