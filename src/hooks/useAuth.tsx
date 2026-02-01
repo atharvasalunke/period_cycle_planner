@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { BACKEND_BASE_URL } from '@/lib/backend';
 
 interface AuthContextType {
     user: User | null;
@@ -13,8 +14,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const API_BASE_URL = 'http://localhost:4000';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
@@ -37,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                    const response = await fetch(`${BACKEND_BASE_URL}/auth/me`, {
                         headers: {
                             'Authorization': `Bearer ${activeToken}`
                         }
@@ -67,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (email: string, password: string) => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            const response = await fetch(`${BACKEND_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -93,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const signup = async (email: string, password: string, firstName: string, lastName: string, dateOfBirth: string) => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+            const response = await fetch(`${BACKEND_BASE_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, firstName, lastName, dateOfBirth }),
@@ -118,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const googleLogin = () => {
         // Start Google OAuth flow via backend redirect
-        window.location.href = `${API_BASE_URL}/auth/google/start`;
+        window.location.href = `${BACKEND_BASE_URL}/auth/google/start`;
     };
 
     const logout = () => {

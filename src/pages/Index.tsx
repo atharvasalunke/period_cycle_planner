@@ -10,6 +10,7 @@ import { QuickTodoList } from '@/components/QuickTodoList';
 import { useCycleData } from '@/hooks/useCycleData';
 import { useTasks } from '@/hooks/useTasks';
 import { useQuickTodos } from '@/hooks/useQuickTodos';
+import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 import { CycleSettings } from '@/types';
 
 const Index = () => {
@@ -26,6 +27,9 @@ const Index = () => {
 
   const [showCyclePhases, setShowCyclePhases] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+
+  const { events: googleEvents } = useGoogleCalendarEvents(calendarMonth);
 
   const handleOnboardingComplete = (settings: CycleSettings) => {
     setCycleSettings(settings);
@@ -58,7 +62,9 @@ const Index = () => {
             <CycleCalendar
               cycleSettings={cycleSettings}
               tasks={tasks}
+              externalEvents={googleEvents}
               showCyclePhases={showCyclePhases && hasCompletedSetup}
+              onMonthChange={setCalendarMonth}
             />
 
             {/* Kanban Board */}
