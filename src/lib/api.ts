@@ -134,9 +134,21 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   }
 }
 
-export async function getWelcomeMessage(): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}/welcome-message`, {
+export async function getWelcomeMessage(cyclePhase?: string, dayOfCycle?: number): Promise<Blob> {
+  const params = new URLSearchParams();
+  if (cyclePhase) {
+    params.append('cycle_phase', cyclePhase);
+  }
+  if (dayOfCycle) {
+    params.append('day_of_cycle', dayOfCycle.toString());
+  }
+  // Add cache-busting timestamp to ensure fresh response
+  params.append('_t', Date.now().toString());
+  
+  const url = `${API_BASE_URL}/welcome-message?${params.toString()}`;
+  const response = await fetch(url, {
     method: 'GET',
+    cache: 'no-store', // Prevent browser caching
   });
 
   if (!response.ok) {

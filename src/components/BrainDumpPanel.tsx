@@ -12,6 +12,8 @@ interface BrainDumpPanelProps {
   onImagesChange?: (images: File[]) => void;
   images?: File[];
   isLoading: boolean;
+  cyclePhase?: string; // 'period' | 'follicular' | 'ovulation' | 'luteal'
+  dayOfCycle?: number;
 }
 
 export function BrainDumpPanel({
@@ -21,17 +23,27 @@ export function BrainDumpPanel({
   onImagesChange,
   images = [],
   isLoading,
+  cyclePhase,
+  dayOfCycle,
 }: BrainDumpPanelProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isPlayingWelcome, setIsPlayingWelcome] = useState(false);
+  const [isLoadingWelcome, setIsLoadingWelcome] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const welcomeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const welcomeAudioBlobRef = useRef<Blob | null>(null);
+  const welcomeAudioUrlRef = useRef<string | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const silenceCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const lastAudioTimeRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     return () => {
@@ -39,8 +51,41 @@ export function BrainDumpPanel({
       if (mediaRecorderRef.current && isRecording) {
         mediaRecorderRef.current.stop();
       }
+      // Cleanup welcome audio URL
+      if (welcomeAudioUrlRef.current) {
+        URL.revokeObjectURL(welcomeAudioUrlRef.current);
+        welcomeAudioUrlRef.current = null;
+      }
     };
   }, [isRecording]);
+
+  // Pre-fetch welcome message when component loads or cycle phase changes
+  useEffect(() => {
+    const preloadWelcomeMessage = async () => {
+      if (!cyclePhase && !dayOfCycle) return; // Skip if no cycle info
+      
+      try {
+        setIsLoadingWelcome(true);
+        console.log('🔄 Pre-loading welcome message...');
+        const audioBlob = await getWelcomeMessage(cyclePhase, dayOfCycle);
+        welcomeAudioBlobRef.current = audioBlob;
+        
+        // Create object URL for the pre-loaded audio
+        if (welcomeAudioUrlRef.current) {
+          URL.revokeObjectURL(welcomeAudioUrlRef.current);
+        }
+        welcomeAudioUrlRef.current = URL.createObjectURL(audioBlob);
+        console.log('✅ Welcome message pre-loaded, ready to play');
+      } catch (error) {
+        console.error('Failed to pre-load welcome message:', error);
+        // Don't block the UI if pre-loading fails
+      } finally {
+        setIsLoadingWelcome(false);
+      }
+    };
+
+    preloadWelcomeMessage();
+  }, [cyclePhase, dayOfCycle]);
 
   const startActualRecording = async () => {
     try {
@@ -124,6 +169,91 @@ export function BrainDumpPanel({
         }
       });
 
+      // Store stream for silence detection
+      streamRef.current = stream;
+      
+      // Set up audio analysis for silence detection
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = audioContext;
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512; // Increased for better frequency resolution
+        analyser.smoothingTimeConstant = 0.3; // Lower for more responsive detection
+        analyserRef.current = analyser;
+        
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        // Initialize last audio time to now (will be updated when audio is detected)
+        lastAudioTimeRef.current = Date.now();
+        console.log('🎤 Silence detection initialized');
+        
+        // Start silence detection
+        const checkSilence = () => {
+          if (!analyserRef.current || !mediaRecorderRef.current) {
+            return;
+          }
+          
+          // Only check if still recording
+          if (mediaRecorderRef.current.state !== 'recording') {
+            return;
+          }
+          
+          const bufferLength = analyserRef.current.frequencyBinCount;
+          const timeDataArray = new Uint8Array(bufferLength);
+          analyserRef.current.getByteTimeDomainData(timeDataArray);
+          
+          // Calculate RMS (Root Mean Square) for better amplitude detection
+          let sumSquares = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            const normalized = (timeDataArray[i] - 128) / 128;
+            sumSquares += normalized * normalized;
+          }
+          const rms = Math.sqrt(sumSquares / bufferLength);
+          const volume = rms * 100; // Convert to 0-100 scale
+          
+          // Threshold for detecting speech (volume level 0-100)
+          const silenceThreshold = 3; // Lower threshold for better sensitivity
+          
+          // Always check time since last audio, regardless of current volume
+          const now = Date.now();
+          const timeSinceLastAudio = lastAudioTimeRef.current ? now - lastAudioTimeRef.current : 0;
+          
+          if (volume > silenceThreshold) {
+            // Audio detected, update last audio time
+            lastAudioTimeRef.current = now;
+            // Only log occasionally to avoid spam
+            if (Math.random() < 0.1) { // Log ~10% of the time
+              console.log(`🔊 Audio detected (volume: ${volume.toFixed(1)}%)`);
+            }
+          } else {
+            // Log silence periodically for debugging (every second)
+            const secondsSinceLastAudio = Math.floor(timeSinceLastAudio / 1000);
+            if (secondsSinceLastAudio > 0 && timeSinceLastAudio % 1000 < 100) {
+              console.log(`🔇 Silence: ${secondsSinceLastAudio}s since last audio (volume: ${volume.toFixed(1)}%)`);
+            }
+          }
+          
+          // Check if 3 seconds of silence have passed
+          if (lastAudioTimeRef.current && timeSinceLastAudio >= 3000) {
+            console.log(`🔇 3 seconds of silence detected (${(timeSinceLastAudio / 1000).toFixed(1)}s), stopping recording...`);
+            stopRecording();
+            return;
+          }
+          
+          // Continue checking if still recording
+          if (mediaRecorderRef.current?.state === 'recording') {
+            silenceCheckRef.current = setTimeout(checkSilence, 100); // Check every 100ms
+          }
+        };
+        
+        // Start checking for silence after a short delay to allow recording to stabilize
+        silenceCheckRef.current = setTimeout(checkSilence, 1000); // Start after 1 second
+      } catch (error) {
+        console.warn('Could not set up silence detection:', error);
+        // Continue without silence detection if it fails
+      }
+      
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -157,6 +287,24 @@ export function BrainDumpPanel({
       
       mediaRecorder.onstop = async () => {
         setIsRecording(false);
+        
+        // Clear silence detection
+        if (silenceCheckRef.current) {
+          clearTimeout(silenceCheckRef.current);
+          silenceCheckRef.current = null;
+        }
+        
+        // Clean up audio context
+        if (audioContextRef.current) {
+          try {
+            await audioContextRef.current.close();
+          } catch (e) {
+            console.warn('Error closing audio context:', e);
+          }
+          audioContextRef.current = null;
+        }
+        analyserRef.current = null;
+        lastAudioTimeRef.current = null;
         
         // Clear recording timer
         if (recordingTimerRef.current) {
@@ -215,7 +363,10 @@ export function BrainDumpPanel({
         reader.readAsArrayBuffer(audioBlob.slice(0, 20));
         
         // Stop all tracks
-        stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
         
         // Validate audio blob is not empty
         if (audioBlob.size === 0) {
@@ -310,6 +461,12 @@ export function BrainDumpPanel({
   };
 
   const stopRecording = () => {
+    // Clear silence detection
+    if (silenceCheckRef.current) {
+      clearTimeout(silenceCheckRef.current);
+      silenceCheckRef.current = null;
+    }
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         if (mediaRecorderRef.current.state === 'recording') {
@@ -460,9 +617,21 @@ export function BrainDumpPanel({
     try {
       setIsPlayingWelcome(true);
       
-      // Fetch welcome message audio
-      const audioBlob = await getWelcomeMessage();
-      const audioUrl = URL.createObjectURL(audioBlob);
+      // Use pre-loaded welcome message if available, otherwise fetch it
+      let audioUrl: string;
+      if (welcomeAudioBlobRef.current && welcomeAudioUrlRef.current) {
+        console.log('🎵 Using pre-loaded welcome message');
+        audioUrl = welcomeAudioUrlRef.current;
+      } else {
+        console.log('🔄 Welcome message not pre-loaded, fetching now...');
+        const audioBlob = await getWelcomeMessage(cyclePhase, dayOfCycle);
+        welcomeAudioBlobRef.current = audioBlob;
+        if (welcomeAudioUrlRef.current) {
+          URL.revokeObjectURL(welcomeAudioUrlRef.current);
+        }
+        audioUrl = URL.createObjectURL(audioBlob);
+        welcomeAudioUrlRef.current = audioUrl;
+      }
       
       // Create audio element and play
       const audio = new Audio(audioUrl);
@@ -607,26 +776,33 @@ export function BrainDumpPanel({
               </>
             )}
           </Button>
-          
-          {isTranscribing && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Transcribing...
-            </div>
-          )}
-          
-          {isRecording && (
-            <div className="flex items-center gap-2 text-sm text-red-500">
-              <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />
-              Recording... {recordingDuration > 0 && `(${recordingDuration}s)`}
-              {recordingDuration < 2 && (
-                <span className="text-xs text-amber-600">
-                  (record at least 2-3 seconds)
-                </span>
-              )}
-            </div>
-          )}
         </div>
+        
+        {/* Status indicator - fixed position below buttons */}
+        {(isRecording || isTranscribing) && (
+          <div className="flex items-center gap-2 text-sm min-h-[24px]">
+            {isRecording && (
+              <>
+                <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-red-500">
+                  Recording... {recordingDuration > 0 && `(${recordingDuration}s)`}
+                  {recordingDuration < 2 && (
+                    <span className="text-xs text-amber-600 ml-1">
+                      (record at least 2-3 seconds)
+                    </span>
+                  )}
+                </span>
+              </>
+            )}
+            {isTranscribing && (
+              <>
+                {isRecording && <span className="text-gray-400">→</span>}
+                <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                <span className="text-gray-500">Transcribing...</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Text input area */}
         <div className="flex-1 flex flex-col gap-4">
