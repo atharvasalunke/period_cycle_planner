@@ -4,7 +4,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from schemas import OrganizeRequest, OrganizeResponse, ChatWithTasksRequest, ChatWithTasksResponse
 from gemini_client import organize_text, chat_with_tasks
-from elevenlabs_client import transcribe_audio
+from elevenlabs_client import transcribe_audio, text_to_speech
 
 # Load environment variables
 load_dotenv()
@@ -29,6 +29,37 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/welcome-message")
+async def get_welcome_message():
+    """
+    Get a welcome message audio file using ElevenLabs TTS.
+    Plays when user clicks the speaker button.
+    """
+    try:
+        welcome_text = (
+            "Hey girlie 💜 I'm here. "
+            "Dump everything on your mind — tasks, reminders, half-formed thoughts. "
+            "I'll help you sort it out."
+        )
+        
+        audio_bytes = text_to_speech(welcome_text)
+        
+        from fastapi.responses import Response
+        return Response(
+            content=audio_bytes,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "inline; filename=welcome.mp3",
+                "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate welcome message: {str(e)}"
+        )
 
 
 @app.post("/organize", response_model=OrganizeResponse)

@@ -107,11 +107,18 @@ def organize_text(text: str, today_iso: str, timezone: str = "UTC") -> OrganizeR
         for task_data in parsed.get("tasks", []):
             try:
                 # Ensure all required fields have defaults
+                category = task_data.get("category")
+                # If category is missing or invalid, default to "other"
+                valid_categories = ["work", "personal", "health", "school", "shopping", "finance", "social", "creative", "other"]
+                if not category or category not in valid_categories:
+                    category = "other"
+                    print(f"Warning: Task '{task_data.get('title', 'unknown')}' had invalid/missing category, defaulting to 'other'")
+                
                 task_dict = {
                     "title": task_data.get("title", ""),
                     "dueDateISO": task_data.get("dueDateISO"),
                     "confidence": task_data.get("confidence", 0.8),
-                    "category": task_data.get("category"),
+                    "category": category,
                     "sourceSpan": task_data.get("sourceSpan"),
                 }
                 # Validate confidence is between 0 and 1

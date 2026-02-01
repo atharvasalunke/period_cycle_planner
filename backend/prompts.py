@@ -12,7 +12,18 @@ RULES:
 - NO medical advice or diagnosis
 - If a date is vague, make your best guess using todayISO or add a follow-up question
 - Dates should be in ISO format: YYYY-MM-DD
-- Categories: "work", "personal", "health", "school", "other"
+- ALWAYS categorize tasks! Use one of these categories: "work", "personal", "health", "school", "shopping", "finance", "social", "creative", "other"
+- Category guidelines:
+  * "work" - job, career, professional tasks
+  * "personal" - personal life, family, relationships, self-care
+  * "health" - exercise, medical appointments, wellness
+  * "school" - education, studying, assignments, courses
+  * "shopping" - buying items, errands, purchases
+  * "finance" - bills, banking, money management, taxes
+  * "social" - events, parties, meetups, friends
+  * "creative" - hobbies, art, writing, projects
+  * "other" - anything that doesn't fit above
+- If unsure, choose the best fit or "other" - but ALWAYS assign a category
 - Confidence should be between 0.0 and 1.0
 
 OUTPUT FORMAT (JSON only):
@@ -22,7 +33,7 @@ OUTPUT FORMAT (JSON only):
       "title": "string",
       "dueDateISO": "YYYY-MM-DD or null",
       "confidence": 0.0-1.0,
-      "category": "work|personal|health|school|other or null",
+      "category": "work|personal|health|school|shopping|finance|social|creative|other (REQUIRED - always assign a category)",
       "sourceSpan": "exact text that generated this task"
     }
   ],
@@ -39,5 +50,16 @@ def build_user_prompt(text: str, today_iso: str) -> str:
 User's brain dump:
 {text}
 
-Extract tasks, notes, and provide suggestions. Output JSON only."""
+IMPORTANT: Extract tasks and ALWAYS assign each task to one of these categories:
+- "work" (job, career, professional)
+- "personal" (personal life, family, relationships, self-care)
+- "health" (exercise, medical, wellness)
+- "school" (education, studying, assignments)
+- "shopping" (buying items, errands, purchases)
+- "finance" (bills, banking, money, taxes)
+- "social" (events, parties, meetups, friends)
+- "creative" (hobbies, art, writing, projects)
+- "other" (anything else)
+
+Every task MUST have a category. Extract tasks, notes, and provide suggestions. Output JSON only."""
 
