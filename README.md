@@ -309,7 +309,9 @@ This project is licensed under the MIT License.
 
 - **Google Gemini** for AI-powered text organization
 - **ElevenLabs** for speech-to-text and text-to-speech capabilities
-- **Radix UI** for accessible component primitives
+- **Cursor IDE** for Developement
+- **ChatGPT** for Ideation and Devpost
+- **Lovable** for Prototype UI
 - **Tailwind CSS** for styling utilities
 
 ## 📧 Contact
