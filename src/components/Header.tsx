@@ -32,16 +32,16 @@ export function Header({
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-5">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl flex items-center justify-center">
-              <img src="/logo.png" alt="LunaFlow" className="h-8 w-8 object-contain" />
+            <div className="h-14 w-14 rounded-2xl flex items-center justify-center">
+              <img src="/logo.png" alt="LunaFlow" className="h-14 w-14 object-contain" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-foreground tracking-tight leading-none">
+              <h1 className="text-2xl font-bold text-foreground tracking-tight leading-none">
                 LunaFlow
               </h1>
-              <p className="text-[9px] text-muted-foreground font-medium">
+              <p className="text-sm text-muted-foreground font-medium">
                 Plan with your rhythm
               </p>
             </div>
@@ -52,41 +52,41 @@ export function Header({
           {isBrainDumpPage && (
             <Button
               variant="ghost"
-              size="sm"
+              size="lg"
               onClick={() => navigate('/')}
-              className="gap-1.5 text-xs"
+              className="gap-2 text-md"
             >
-              <Home className="h-3.5 w-3.5" />
+              <Home className="h-5 w-5" />
               Back to Home
             </Button>
           )}
           {!isBrainDumpPage && (
             <Button
               variant={showCyclePhases ? 'secondary' : 'ghost'}
-              size="sm"
+              size="lg"
               onClick={onToggleCyclePhases}
-              className="gap-1.5 text-xs hidden sm:flex"
+              className="gap-2 text-md hidden sm:flex"
             >
-              <LayoutGrid className="h-3.5 w-3.5" />
+              <LayoutGrid className="h-5 w-5" />
               Cycle View
             </Button>
           )}
           {!isBrainDumpPage && (
             <Button
               variant="ghost"
-              size="sm"
+              size="lg"
               onClick={() => navigate('/brain-dump')}
-              className="gap-1.5 text-xs"
+              className="gap-2 text-md"
             >
-              <Sparkles className="h-3.5 w-3.5" />
+              <Sparkles className="h-5 w-5" />
               Brain Dump
             </Button>
           )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-                <Avatar className="h-9 w-9 border-2 border-background shadow-sm hover:border-primary/20 transition-all">
+              <Button variant="ghost" className="relative h-12 w-12 rounded-full p-0">
+                <Avatar className="h-12 w-12 border-2 border-background shadow-sm hover:border-primary/20 transition-all">
                   <AvatarImage src={user?.avatarUrl} alt={user?.name} />
                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold uppercase">
                     {user?.name?.substring(0, 2) || <UserIcon className="h-4 w-4" />}
