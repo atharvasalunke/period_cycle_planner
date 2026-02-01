@@ -47,7 +47,7 @@ const Login = () => {
 
     return (
         <AuthLayout
-            title="Welcome Back"
+            title="Welcome "
             subtitle="Sign in to your cycle planner account"
         >
             <form onSubmit={handleLogin} className="space-y-4">

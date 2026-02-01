@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CycleSettings } from '@/types';
+import { useTheme } from '@/components/theme-provider';
 
 interface SettingsModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function SettingsModal({
   onUpdateSettings,
   onResetAll,
 }: SettingsModalProps) {
+  const { theme, setTheme } = useTheme();
   const [lastPeriodStart, setLastPeriodStart] = useState<string>(
     cycleSettings ? format(cycleSettings.lastPeriodStart, 'yyyy-MM-dd') : ''
   );
@@ -53,6 +55,37 @@ export function SettingsModal({
         </DialogHeader>
 
         <div className="space-y-5 py-4">
+          {/* Appearance Section */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Appearance</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant={theme === 'light' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTheme('light')}
+                className="w-full"
+              >
+                Light
+              </Button>
+              <Button
+                variant={theme === 'dark' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTheme('dark')}
+                className="w-full"
+              >
+                Dark
+              </Button>
+              <Button
+                variant={theme === 'system' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTheme('system')}
+                className="w-full"
+              >
+                System
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="lastPeriod" className="text-sm font-medium">
               Last period start date

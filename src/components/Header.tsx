@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, LayoutGrid, Settings, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
+import { Calendar, LayoutGrid, Settings, LogOut, User as UserIcon, Sparkles, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -34,14 +34,14 @@ export function Header({
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <Calendar className="h-5 w-5 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center">
+              <img src="/logo.png" alt="LunaFlow" className="h-8 w-8 object-contain" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground tracking-tight">
-                CycleSync
+              <h1 className="text-sm font-bold text-foreground tracking-tight leading-none">
+                LunaFlow
               </h1>
-              <p className="text-[10px] text-muted-foreground -mt-0.5">
+              <p className="text-[9px] text-muted-foreground font-medium">
                 Plan with your rhythm
               </p>
             </div>

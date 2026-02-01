@@ -1,4 +1,5 @@
 import React from 'react';
+import { Moon } from 'lucide-react';
 
 export const AuthLayout: React.FC<{ children: React.ReactNode; title: string; subtitle: string }> = ({
     children,
@@ -7,13 +8,16 @@ export const AuthLayout: React.FC<{ children: React.ReactNode; title: string; su
 }) => {
     return (
         <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
-            {/* Left Col - Welcome & Branding (Hidden on mobile) */}
+            {/* Left Col - Welcome & Branding (Hidden on mobile) - ALWAYS DARK */}
             <div className="hidden lg:flex flex-col justify-between bg-zinc-900 p-12 relative overflow-hidden">
                 {/* Branding Top Left */}
                 <div className="z-10">
-                    <div className="inline-flex items-center gap-2 font-bold text-xl text-white">
-                        <span className="text-2xl">🌸</span>
-                        <span>Period Cycle Planner</span>
+                    <div className="inline-flex items-center gap-2">
+                        <img src="/logo.png" alt="LunaFlow" className="h-10 w-10 object-contain" />
+                        <div className="flex flex-col">
+                            <span className="text-xl font-bold leading-none text-white">LunaFlow</span>
+                            <span className="text-xs font-medium text-zinc-400">Plan with your rhythm</span>
+                        </div>
                     </div>
                 </div>
 
@@ -21,7 +25,7 @@ export const AuthLayout: React.FC<{ children: React.ReactNode; title: string; su
                 <div className="z-10 max-w-lg mb-20 text-white">
                     <h1 className="text-4xl font-extrabold tracking-tight mb-6 leading-tight">
                         Plan your activities <br />
-                        <span className="text-primary-foreground/90">while tracking your cycle.</span>
+                        <span className="text-white/90">while tracking your cycle.</span>
                     </h1>
                     <p className="text-lg text-zinc-400 leading-relaxed">
                         Stay in sync with your body. Organize your life around your natural rhythm with intelligent insights and planning tools.
@@ -30,7 +34,7 @@ export const AuthLayout: React.FC<{ children: React.ReactNode; title: string; su
 
                 {/* Footer Copyright */}
                 <div className="z-10 text-sm text-zinc-500">
-                    © {new Date().getFullYear()} Period Cycle Planner. All rights reserved.
+                    © {new Date().getFullYear()} LunaFlow. All rights reserved.
                 </div>
 
                 {/* Decorative Background Elements */}
@@ -39,16 +43,16 @@ export const AuthLayout: React.FC<{ children: React.ReactNode; title: string; su
                 <div className="absolute top-[40%] left-[20%] w-[20%] h-[20%] bg-pink-500/20 rounded-full blur-2xl animate-pulse delay-300"></div>
             </div>
 
-            {/* Right Col - Form */}
-            <div className="flex items-center justify-center p-8 bg-background relative">
+            {/* Right Col - Form (Dynamic Theme) */}
+            <div className="flex items-center justify-center p-8 bg-background dark:bg-card relative">
                 {/* Mobile Decoration (only visible on small screens) */}
                 <div className="lg:hidden absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-phase-period-light/30 rounded-full blur-3xl"></div>
 
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px] relative z-10 animate-fade-in">
                     <div className="flex flex-col space-y-2 text-center lg:text-left">
                         {/* Mobile Branding Icon */}
-                        <div className="lg:hidden mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                            <span className="text-2xl">🌸</span>
+                        <div className="lg:hidden mx-auto mb-4 w-10 h-10 flex items-center justify-center">
+                            <img src="/logo.png" alt="LunaFlow" className="h-10 w-10 object-contain" />
                         </div>
 
                         <h1 className="text-2xl font-semibold tracking-tight">
