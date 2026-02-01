@@ -18,14 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Task, TaskStatus, TaskPriority } from '@/types';
+import { Task, TaskStatus, TaskPriority, CycleSettings } from '@/types';
 import { cn } from '@/lib/utils';
+import { getCyclePhase } from '@/lib/cycle-utils';
 
 interface KanbanBoardProps {
   tasks: Task[];
   onAddTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
   onMoveTask: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
+  cycleSettings?: CycleSettings | null;
 }
 
 const columns: { status: TaskStatus; title: string; color: string }[] = [
@@ -40,11 +42,19 @@ const priorityColors: Record<TaskPriority, string> = {
   high: 'bg-task-high/20 text-task-high',
 };
 
+const phaseDots: Record<string, string> = {
+  period: 'bg-phase-period',
+  follicular: 'bg-phase-follicular',
+  ovulation: 'bg-phase-ovulation',
+  luteal: 'bg-phase-luteal',
+};
+
 export function KanbanBoard({
   tasks,
   onAddTask,
   onMoveTask,
   onDeleteTask,
+  cycleSettings,
 }: KanbanBoardProps) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -203,9 +213,18 @@ export function KanbanBoard({
                           </span>
                         )}
                         {task.dueDate && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             {format(task.dueDate, 'MMM d')}
+                            {cycleSettings && (
+                              <span
+                                className={cn(
+                                  'h-2 w-2 rounded-full',
+                                  phaseDots[getCyclePhase(task.dueDate, cycleSettings).phase] || 'bg-muted-foreground'
+                                )}
+                                title={`${getCyclePhase(task.dueDate, cycleSettings).phase.charAt(0).toUpperCase() + getCyclePhase(task.dueDate, cycleSettings).phase.slice(1)} phase`}
+                              />
+                            )}
                           </span>
                         )}
                       </div>

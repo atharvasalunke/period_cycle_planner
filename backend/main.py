@@ -89,10 +89,17 @@ async def organize(request: OrganizeRequest):
             )
         
         # Call Gemini to organize text only (images are for visualization only)
+        cycle_calendar = None
+        if request.cyclePhaseCalendar:
+            cycle_calendar = [
+                {"date": item.date, "phase": item.phase, "dayOfCycle": item.dayOfCycle}
+                for item in request.cyclePhaseCalendar
+            ]
         result = organize_text(
             text=request.text.strip(),
             today_iso=request.todayISO,
-            timezone=request.timezone or "UTC"
+            timezone=request.timezone or "UTC",
+            cycle_phase_calendar=cycle_calendar
         )
         
         print(f"Organization complete: {len(result.tasks)} tasks, {len(result.notes)} notes")

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { BrainDumpMixboard } from '@/components/BrainDumpMixboard';
+import { BrainDumpMindMap } from '@/components/BrainDumpMindMap';
 import { useTasks } from '@/hooks/useTasks';
 
 export default function BrainDump() {
@@ -56,7 +56,7 @@ export default function BrainDump() {
         onToggleCyclePhases={() => {}}
       />
 
-      {/* Mixboard-style canvas with grid background */}
+      {/* Mind Map-style canvas with grid background */}
       <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
         {/* Grid background pattern */}
         <div 
@@ -72,7 +72,7 @@ export default function BrainDump() {
         
         {/* Content */}
         <div className="relative z-10 p-8">
-          <BrainDumpMixboard onAddTasks={addTask} />
+          <BrainDumpMindMap onAddTasks={addTask} />
         </div>
       </div>
     </div>

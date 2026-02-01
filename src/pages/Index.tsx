@@ -76,6 +76,7 @@ const Index = () => {
               onAddTask={addTask}
               onMoveTask={moveTask}
               onDeleteTask={deleteTask}
+              cycleSettings={cycleSettings}
             />
           </div>
 

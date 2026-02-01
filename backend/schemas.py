@@ -11,10 +11,17 @@ class TaskItem(BaseModel):
     sourceSpan: Optional[str] = None
 
 
+class CyclePhaseDate(BaseModel):
+    date: str  # YYYY-MM-DD
+    phase: str  # 'period' | 'follicular' | 'ovulation' | 'luteal'
+    dayOfCycle: int
+
+
 class OrganizeRequest(BaseModel):
     text: str
     todayISO: str  # YYYY-MM-DD
-    timezone: Optional[str] = "UTC"
+    timezone: Optional[str] = "EST"
+    cyclePhaseCalendar: Optional[List[CyclePhaseDate]] = None  # Calendar of cycle phases for upcoming dates
 
 
 class OrganizeResponse(BaseModel):

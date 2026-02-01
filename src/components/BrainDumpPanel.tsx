@@ -487,7 +487,23 @@ export function BrainDumpPanel({
         startActualRecording();
       };
       
-      await audio.play();
+      // Play the audio - handle browser autoplay policies
+      try {
+        await audio.play();
+        console.log('✅ Welcome message started playing');
+      } catch (playError) {
+        // If autoplay is blocked, try to play anyway (user interaction should allow it)
+        console.warn('Autoplay may be blocked, attempting to play:', playError);
+        // The audio should still work since this is triggered by user click
+        audio.play().catch((err) => {
+          console.error('Failed to play welcome message:', err);
+          setIsPlayingWelcome(false);
+          URL.revokeObjectURL(audioUrl);
+          welcomeAudioRef.current = null;
+          // Start recording even if welcome message fails
+          startActualRecording();
+        });
+      }
     } catch (error) {
       console.error('Error playing welcome message, starting recording anyway:', error);
       setIsPlayingWelcome(false);
@@ -504,39 +520,10 @@ export function BrainDumpPanel({
         <p className="text-xs text-gray-500 mt-1">Speak or type everything on your mind</p>
       </div>
 
-      {/* Spacious textarea area */}
+      {/* Controls area */}
       <div className="flex-1 flex flex-col p-6 gap-4">
-        <Textarea
-          placeholder="Tasks, reminders, feelings, half-thoughts... speak or type it all down."
-          value={text}
-          onChange={(e) => onTextChange(e.target.value)}
-          className="flex-1 min-h-[400px] resize-none text-sm border-0 focus-visible:ring-0 bg-transparent p-0 placeholder:text-gray-400"
-          disabled={isLoading || isTranscribing}
-        />
-
-        {/* Image upload area */}
-        {images.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-            {images.map((image, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt={`Upload ${index + 1}`}
-                  className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                />
-                <button
-                  onClick={() => handleRemoveImage(index)}
-                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Voice recording and image upload controls */}
-        <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+        {/* Voice recording, image upload, and organize controls - all on same line */}
+        <div className="flex items-center gap-3 flex-wrap">
           {!isRecording && !isPlayingWelcome ? (
             <Button
               onClick={startRecording}
@@ -602,43 +589,11 @@ export function BrainDumpPanel({
             className="hidden"
           />
           
-          {isTranscribing && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Transcribing...
-            </div>
-          )}
-          
-            {isRecording && (
-              <div className="flex items-center gap-2 text-sm text-red-500">
-                <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />
-                Recording... {recordingDuration > 0 && `(${recordingDuration}s)`}
-                {recordingDuration < 2 && (
-                  <span className="text-xs text-amber-600">
-                    (record at least 2-3 seconds)
-                  </span>
-                )}
-              </div>
-            )}
-        </div>
-
-        {/* Bottom action bar */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <p className="text-xs text-gray-400">
-              {text.length > 0 ? `${text.length} characters` : 'Start typing or speaking...'}
-            </p>
-            {images.length > 0 && (
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                {images.length} image{images.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
           <Button
             onClick={onOrganize}
             disabled={(!text.trim() && images.length === 0) || isLoading || isTranscribing}
-            className="gap-2 bg-primary hover:bg-primary/90"
-            size="lg"
+            className="gap-2 bg-primary hover:bg-primary/90 ml-auto"
+            size="sm"
           >
             {isLoading ? (
               <>
@@ -652,6 +607,57 @@ export function BrainDumpPanel({
               </>
             )}
           </Button>
+          
+          {isTranscribing && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Transcribing...
+            </div>
+          )}
+          
+          {isRecording && (
+            <div className="flex items-center gap-2 text-sm text-red-500">
+              <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+              Recording... {recordingDuration > 0 && `(${recordingDuration}s)`}
+              {recordingDuration < 2 && (
+                <span className="text-xs text-amber-600">
+                  (record at least 2-3 seconds)
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Text input area */}
+        <div className="flex-1 flex flex-col gap-4">
+          <Textarea
+            placeholder="Start typing or speaking... Tasks, reminders, feelings, half-thoughts... speak or type it all down."
+            value={text}
+            onChange={(e) => onTextChange(e.target.value)}
+            className="flex-1 min-h-[300px] resize-none text-sm border-gray-200 focus-visible:ring-1 focus-visible:ring-primary placeholder:text-gray-400"
+            disabled={isLoading || isTranscribing}
+          />
+
+          {/* Image upload area */}
+          {images.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+              {images.map((image, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt={`Upload ${index + 1}`}
+                    className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                  />
+                  <button
+                    onClick={() => handleRemoveImage(index)}
+                    className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 transition-opacity"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -4,13 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrganizeTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { CycleSettings } from '@/types';
+import { getCyclePhase } from '@/lib/cycle-utils';
 
-interface MixboardViewProps {
+interface MindMapViewProps {
   tasks: OrganizeTask[];
   onUpdateTask: (index: number, task: Partial<OrganizeTask>) => void;
   onDeleteTask: (index: number) => void;
   onMoveTask: (taskIndex: number, newCategory: string | null) => void;
+  cycleSettings?: CycleSettings | null;
 }
+
+const phaseDots: Record<string, string> = {
+  period: 'bg-phase-period',
+  follicular: 'bg-phase-follicular',
+  ovulation: 'bg-phase-ovulation',
+  luteal: 'bg-phase-luteal',
+};
 
 const CATEGORIES = [
   { id: 'work', label: 'Work', color: 'bg-blue-50 border-blue-200 text-blue-700' },
@@ -25,12 +35,13 @@ const CATEGORIES = [
   { id: null, label: 'Uncategorized', color: 'bg-slate-50 border-slate-200 text-slate-700' },
 ];
 
-export function MixboardView({
+export function MindMapView({
   tasks,
   onUpdateTask,
   onDeleteTask,
   onMoveTask,
-}: MixboardViewProps) {
+  cycleSettings,
+}: MindMapViewProps) {
   const [draggedTaskIndex, setDraggedTaskIndex] = useState<number | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
 
@@ -96,11 +107,13 @@ export function MixboardView({
 
   return (
     <div 
-      className="flex gap-4 overflow-x-auto pb-4" 
-      style={{ minHeight: '500px' }}
+      className="flex gap-4 overflow-x-auto pb-4 w-full" 
+      style={{ minHeight: '500px', width: 'max-content' }}
     >
       {CATEGORIES.map((category) => {
-        const categoryTasks = tasksByCategory[category.id || 'uncategorized'] || [];
+        // Always show all categories, even if empty
+        const categoryKey = category.id || 'uncategorized';
+        const categoryTasks = tasksByCategory[categoryKey] || [];
         const isDraggingOver = dragOverCategory === category.id;
 
         return (
@@ -170,6 +183,15 @@ export function MixboardView({
                           className="text-xs h-7 border-gray-200 bg-white"
                           onDragStart={(e) => e.stopPropagation()}
                         />
+                        {cycleSettings && task.dueDateISO && (
+                          <span
+                            className={cn(
+                              'h-2 w-2 rounded-full',
+                              phaseDots[getCyclePhase(new Date(task.dueDateISO), cycleSettings).phase] || 'bg-muted-foreground'
+                            )}
+                            title={`${getCyclePhase(new Date(task.dueDateISO), cycleSettings).phase.charAt(0).toUpperCase() + getCyclePhase(new Date(task.dueDateISO), cycleSettings).phase.slice(1)} phase`}
+                          />
+                        )}
                       </div>
                     )}
                   </div>
