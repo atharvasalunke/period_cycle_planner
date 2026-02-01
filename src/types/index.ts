@@ -42,8 +42,9 @@ export interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  source: 'google' | 'outlook' | 'manual';
+  source: 'google' | 'google-task' | 'outlook' | 'manual';
   color?: string;
+  completed?: boolean;
 }
 
 // User preferences
@@ -52,4 +53,14 @@ export interface UserPreferences {
   showCyclePhases: boolean;
   showExternalEvents: boolean;
   onboardingComplete: boolean;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: Date;
+  avatarUrl?: string;
 }

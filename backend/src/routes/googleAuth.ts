@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { google } from "googleapis";
 
 import { prisma } from "../db/prisma.js";
 import {
@@ -24,25 +25,25 @@ const resolveUser = async (userId?: string, email?: string) => {
   });
 };
 
-googleAuthRouter.post("/start", async (req, res) => {
+googleAuthRouter.get("/start", async (req, res) => {
   try {
-    const { email, userId } = req.body ?? {};
-    const user = await resolveUser(
-      typeof userId === "string" ? userId : undefined,
-      typeof email === "string" ? email : undefined
-    );
+    const userId = typeof req.query.userId === "string" ? req.query.userId : undefined;
 
-    if (!user) {
-      return res.status(400).json({ error: "Provide a valid userId or email." });
+    // We can pass state to Google to remember where we came from or if we're linking
+    const state: Record<string, string> = {};
+    if (userId) {
+      state.userId = userId;
     }
 
-    const url = getGoogleAuthUrl({ userId: user.id });
-    return res.json({ url, userId: user.id });
+    const url = getGoogleAuthUrl(state);
+    return res.redirect(url);
   } catch (error) {
     console.error("Google OAuth start failed", error);
     return res.status(500).json({ error: "Failed to start Google OAuth." });
   }
 });
+
+import jwt from "jsonwebtoken";
 
 googleAuthRouter.get("/callback", async (req, res) => {
   try {
@@ -53,18 +54,64 @@ googleAuthRouter.get("/callback", async (req, res) => {
       return res.status(400).json({ error: "Missing OAuth code." });
     }
 
-    const decoded = decodeGoogleState(state);
-    const userId = decoded?.userId;
-    if (!userId) {
-      return res.status(400).json({ error: "Missing user state." });
-    }
-
     const oauth2Client = createGoogleOAuthClient();
     const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
 
-    await upsertGoogleTokens(userId, tokens);
+    if (!tokens.access_token && !tokens.id_token) {
+      return res.status(400).json({
+        error:
+          "Google did not return an access token. Check OAuth client type, redirect URI, and scopes, then retry.",
+      });
+    }
 
-    return res.json({ status: "connected" });
+    let email: string | undefined;
+    let firstName: string | undefined;
+    let lastName: string | undefined;
+
+    if (tokens.id_token) {
+      const ticket = await oauth2Client.verifyIdToken({
+        idToken: tokens.id_token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      email = payload?.email ?? undefined;
+      firstName = payload?.given_name ?? undefined;
+      lastName = payload?.family_name ?? undefined;
+    }
+
+    if (!email && tokens.access_token) {
+      const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+      const { data: userInfo } = await oauth2.userinfo.get();
+      email = userInfo.email ?? undefined;
+      firstName = userInfo.given_name ?? undefined;
+      lastName = userInfo.family_name ?? undefined;
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: "Could not retrieve email from Google." });
+    }
+
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: { firstName, lastName },
+      create: {
+        email,
+        firstName,
+        lastName,
+      },
+    });
+
+    // Save tokens if we have them (for calendar access later)
+    await upsertGoogleTokens(user.id, tokens);
+
+    const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret";
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+
+    // Redirect back to the frontend with the token.
+    const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:8080").split(",");
+    const frontendUrl = allowedOrigins[0].trim();
+    return res.redirect(`${frontendUrl}/login?token=${token}`);
   } catch (error) {
     console.error("Google OAuth callback failed", error);
     return res.status(500).json({ error: "Failed to complete Google OAuth." });

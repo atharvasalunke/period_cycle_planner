@@ -10,19 +10,22 @@ import {
   isSameDay,
   addMonths,
   subMonths,
+  startOfDay,
+  endOfDay,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CyclePhase, Task } from '@/types';
-import { CycleSettings } from '@/types';
+import { CalendarEvent, CyclePhase, CycleSettings, Task } from '@/types';
 import { getCyclePhase } from '@/lib/cycle-utils';
 import { cn } from '@/lib/utils';
 
 interface CycleCalendarProps {
   cycleSettings: CycleSettings | null;
   tasks: Task[];
+  externalEvents?: CalendarEvent[];
   showCyclePhases?: boolean;
   onDateSelect?: (date: Date) => void;
+  onMonthChange?: (month: Date) => void;
 }
 
 const phaseBackgrounds: Record<CyclePhase, string> = {
@@ -42,8 +45,10 @@ const phaseDots: Record<CyclePhase, string> = {
 export function CycleCalendar({
   cycleSettings,
   tasks,
+  externalEvents = [],
   showCyclePhases = true,
   onDateSelect,
+  onMonthChange,
 }: CycleCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const today = new Date();
@@ -74,6 +79,18 @@ export function CycleCalendar({
     if (!cycleSettings) return null;
     return getCyclePhase(date, cycleSettings);
   };
+
+  const getEventsForDate = (date: Date) => {
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+    return externalEvents.filter(
+      (event) => event.start <= dayEnd && event.end >= dayStart
+    );
+  };
+
+  React.useEffect(() => {
+    onMonthChange?.(currentMonth);
+  }, [currentMonth, onMonthChange]);
 
   return (
     <div className="rounded-2xl border bg-card shadow-card overflow-hidden">
@@ -128,6 +145,7 @@ export function CycleCalendar({
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isToday = isSameDay(day, today);
           const dayTasks = getTasksForDate(day);
+          const dayEvents = getEventsForDate(day);
           const phaseInfo = showCyclePhases ? getPhaseForDate(day) : null;
 
           return (
@@ -151,28 +169,28 @@ export function CycleCalendar({
                 >
                   {format(day, 'd')}
                 </span>
-                {phaseInfo && isCurrentMonth && (
-                  <span
-                    className={cn(
-                      'h-2 w-2 rounded-full',
-                      phaseDots[phaseInfo.phase]
-                    )}
-                  />
-                )}
               </div>
 
               {/* Phase background indicator */}
               {phaseInfo && isCurrentMonth && showCyclePhases && (
                 <div
                   className={cn(
-                    'absolute inset-0 opacity-30 pointer-events-none',
+                    'absolute inset-0 opacity-75 pointer-events-none',
                     phaseBackgrounds[phaseInfo.phase]
                   )}
                 />
               )}
+              {phaseInfo && isCurrentMonth && (
+                <span
+                  className={cn(
+                    'absolute top-2 right-2 h-2 w-2 rounded-full',
+                    phaseDots[phaseInfo.phase]
+                  )}
+                />
+              )}
 
-              {/* Tasks */}
-              {dayTasks.length > 0 && isCurrentMonth && (
+              {/* Tasks + Google Calendar events */}
+              {(dayTasks.length > 0 || dayEvents.length > 0) && isCurrentMonth && (
                 <div className="mt-1 space-y-0.5 relative z-10">
                   {dayTasks.slice(0, 2).map((task) => (
                     <div
@@ -192,6 +210,26 @@ export function CycleCalendar({
                       +{dayTasks.length - 2} more
                     </div>
                   )}
+                  {dayEvents.slice(0, 2).map((event) => {
+                    const isTask = event.source === 'google-task';
+                    return (
+                      <div
+                        key={event.id}
+                        className={cn(
+                          'text-xs px-1.5 py-0.5 rounded truncate',
+                          isTask ? 'bg-red-500/10 text-red-700' : 'bg-blue-500/10 text-blue-700',
+                          event.completed && 'line-through opacity-70'
+                        )}
+                      >
+                        {event.title}
+                      </div>
+                    );
+                  })}
+                  {dayEvents.length > 2 && (
+                    <div className="text-xs text-muted-foreground px-1.5">
+                      +{dayEvents.length - 2} more
+                    </div>
+                  )}
                 </div>
               )}
             </button>
@@ -204,19 +242,19 @@ export function CycleCalendar({
         <div className="p-4 border-t bg-muted/30">
           <div className="flex flex-wrap gap-4 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-period" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-period-light" />
               <span className="text-muted-foreground">Period</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-follicular" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-follicular-light" />
               <span className="text-muted-foreground">Follicular</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-ovulation" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-ovulation-light" />
               <span className="text-muted-foreground">Fertile Window</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-luteal" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-luteal-light" />
               <span className="text-muted-foreground">Luteal</span>
             </div>
           </div>

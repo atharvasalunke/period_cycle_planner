@@ -75,4 +75,13 @@ const getCalendarClient = async (userId: string) => {
   return google.calendar({ version: "v3", auth });
 };
 
-export { getCalendarClient, getAuthorizedGoogleClient, upsertGoogleTokens };
+const getTasksClient = async (userId: string) => {
+  const auth = await getAuthorizedGoogleClient(userId);
+  if (!auth) {
+    return null;
+  }
+
+  return google.tasks({ version: "v1", auth });
+};
+
+export { getCalendarClient, getTasksClient, getAuthorizedGoogleClient, upsertGoogleTokens };
