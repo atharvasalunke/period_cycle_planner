@@ -8,6 +8,8 @@ import { Task, CycleSettings } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { useCycleData } from '@/hooks/useCycleData';
 import { getCyclePhase } from '@/lib/cycle-utils';
+import { useGoogleTasks } from '@/hooks/useGoogleTasks';
+import { parseDateInput } from '@/lib/date';
 
 interface BrainDumpMindMapProps {
   onAddTasks: (task: Omit<Task, 'id' | 'createdAt'>) => void;
@@ -15,6 +17,7 @@ interface BrainDumpMindMapProps {
 
 export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
   const { cycleSettings, todayPhase } = useCycleData();
+  const { createTask: createGoogleTask } = useGoogleTasks();
   const [brainDumpText, setBrainDumpText] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -99,12 +102,34 @@ export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
 
   const [clearAfterApply, setClearAfterApply] = useState(true);
 
+  const syncTasksToGoogle = async (tasks: OrganizeTask[]) => {
+    if (!tasks.length) return;
+
+    const results = await Promise.allSettled(
+      tasks.map((task) =>
+        createGoogleTask({
+          title: task.title,
+          dueDate: task.dueDateISO ? parseDateInput(task.dueDateISO) : undefined,
+        })
+      )
+    );
+
+    const failedCount = results.filter((result) => result.status === 'rejected').length;
+    if (failedCount > 0) {
+      toast({
+        title: 'Google sync failed',
+        description: `${failedCount} task${failedCount > 1 ? 's' : ''} failed to sync.`,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleApplyToBoard = () => {
     const tasksToAdd = organizedTasks.map((task) => ({
       title: task.title,
       status: 'todo' as const,
       priority: 'medium' as const,
-      dueDate: task.dueDateISO ? new Date(task.dueDateISO) : undefined,
+      dueDate: task.dueDateISO ? parseDateInput(task.dueDateISO) : undefined,
     }));
 
     tasksToAdd.forEach((task) => onAddTasks(task));
@@ -121,38 +146,11 @@ export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
 
   const handleApplyToCalendar = () => {
     const tasksWithDates = organizedTasks.filter((task) => task.dueDateISO);
-    const tasksToAdd = tasksWithDates.map((task) => ({
-      title: task.title,
-      status: 'todo' as const,
-      priority: 'medium' as const,
-      dueDate: new Date(task.dueDateISO!),
-    }));
-
-    tasksToAdd.forEach((task) => onAddTasks(task));
+    void syncTasksToGoogle(tasksWithDates);
 
     toast({
       title: 'Applied!',
-      description: `Added ${tasksToAdd.length} tasks to calendar`,
-    });
-
-    if (clearAfterApply) {
-      handleReset();
-    }
-  };
-
-  const handleApplyAll = () => {
-    const tasksToAdd = organizedTasks.map((task) => ({
-      title: task.title,
-      status: 'todo' as const,
-      priority: 'medium' as const,
-      dueDate: task.dueDateISO ? new Date(task.dueDateISO) : undefined,
-    }));
-
-    tasksToAdd.forEach((task) => onAddTasks(task));
-
-    toast({
-      title: 'Applied!',
-      description: `Added ${tasksToAdd.length} tasks to board and calendar`,
+      description: `Added ${tasksWithDates.length} tasks to calendar`,
     });
 
     if (clearAfterApply) {
@@ -241,7 +239,6 @@ export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
             followUps={followUps}
             onApplyToBoard={handleApplyToBoard}
             onApplyToCalendar={handleApplyToCalendar}
-            onApplyAll={handleApplyAll}
             onReset={handleReset}
             onUpdateTask={handleUpdateTask}
             onDeleteTask={handleDeleteTask}
@@ -257,4 +254,3 @@ export function BrainDumpMindMap({ onAddTasks }: BrainDumpMindMapProps) {
     </div>
   );
 }
-

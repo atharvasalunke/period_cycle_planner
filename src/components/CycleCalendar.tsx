@@ -161,8 +161,8 @@ export function CycleCalendar({
               <div className="flex items-start justify-between">
                 <span
                   className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium',
-                    isToday && 'bg-primary text-primary-foreground pulse-soft',
+                    'flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold',
+                    isToday && 'bg-indigo-900 text-primary-foreground pulse-soft',
                     !isToday && isCurrentMonth && 'text-foreground',
                     !isCurrentMonth && 'text-muted-foreground'
                   )}
@@ -196,10 +196,8 @@ export function CycleCalendar({
                     <div
                       key={task.id}
                       className={cn(
-                        'text-xs px-1.5 py-0.5 rounded truncate',
-                        task.status === 'done'
-                          ? 'bg-accent/50 text-accent-foreground line-through'
-                          : 'bg-primary/10 text-primary'
+                        'bg-primary/70 text-white font-bold text-xs px-1.5 py-0.5 rounded truncate',
+                        task.status === 'done' && 'line-through opacity-50'
                       )}
                     >
                       {task.title}
@@ -217,8 +215,8 @@ export function CycleCalendar({
                         key={event.id}
                         className={cn(
                           'text-xs px-1.5 py-0.5 rounded truncate',
-                          isTask ? 'bg-red-500/10 text-red-700' : 'bg-blue-500/10 text-blue-700',
-                          event.completed && 'line-through opacity-70'
+                          isTask ? 'bg-[#F0527A]/70 text-white font-bold' : 'bg-blue-500/70 text-white font-bold',
+                          event.completed && 'line-through opacity-50'
                         )}
                       >
                         {event.title}
