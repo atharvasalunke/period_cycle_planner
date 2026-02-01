@@ -6,6 +6,7 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { CycleCalendar } from '@/components/CycleCalendar';
 import { CycleInsightCard } from '@/components/CycleInsightCard';
 import { KanbanBoard } from '@/components/KanbanBoard';
+import { SymptomTagging } from '@/components/SymptomTagging';
 import { useCycleData } from '@/hooks/useCycleData';
 import { useTasks } from '@/hooks/useTasks';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
@@ -257,6 +258,9 @@ const Index = () => {
                 </div>
               )}
             </div>
+
+            {/* Symptom Tagging */}
+            <SymptomTagging />
           </div>
         </div>
       </main>
