@@ -1,20 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { differenceInDays } from 'date-fns';
+import { addDays, differenceInDays, endOfDay, format, isSameDay } from 'date-fns';
 import { Header } from '@/components/Header';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { CycleCalendar } from '@/components/CycleCalendar';
 import { CycleInsightCard } from '@/components/CycleInsightCard';
 import { KanbanBoard } from '@/components/KanbanBoard';
-import { QuickTodoList } from '@/components/QuickTodoList';
 import { useCycleData } from '@/hooks/useCycleData';
 import { useTasks } from '@/hooks/useTasks';
-import { useQuickTodos } from '@/hooks/useQuickTodos';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 import { useGoogleTasks } from '@/hooks/useGoogleTasks';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { CycleSettings } from '@/types';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const Index = () => {
   const {
@@ -26,7 +25,6 @@ const Index = () => {
   } = useCycleData();
 
   const { tasks, addTask, moveTask, deleteTask } = useTasks();
-  const { todos, addTodo, toggleTodo, deleteTodo, clearCompleted } = useQuickTodos();
 
   const [showCyclePhases, setShowCyclePhases] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -37,8 +35,13 @@ const Index = () => {
 
   const { events: googleEvents, refresh: refreshGoogleEvents } =
     useGoogleCalendarEvents(calendarMonth);
-  const { tasks: googleTasks, refresh: refreshGoogleTasks, updateTaskStatus } =
-    useGoogleTasks();
+  const {
+    tasks: googleTasks,
+    refresh: refreshGoogleTasks,
+    updateTaskStatus,
+    deleteTask: deleteGoogleTask,
+    createTask: createGoogleTask,
+  } = useGoogleTasks();
 
   const boardTasks = useMemo(
     () => [
@@ -50,6 +53,15 @@ const Index = () => {
     ],
     [googleTaskOverrides, googleTasks, tasks]
   );
+
+  const upcomingEvents = useMemo(() => {
+    const start = new Date();
+    const end = endOfDay(addDays(start, 7));
+
+    return googleEvents
+      .filter((event) => event.start <= end && event.end >= start)
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+  }, [googleEvents]);
 
   const handleOnboardingComplete = (settings: CycleSettings) => {
     setCycleSettings(settings);
@@ -112,11 +124,32 @@ const Index = () => {
   const handleDeleteTask = (id: string) => {
     const target = boardTasks.find((task) => task.id === id);
     if (target?.source === 'google-task') {
-      toast.message('Google Tasks can be deleted only from Google.');
+      deleteGoogleTask(target.externalId ?? id, target.externalListId)
+        .then(() => {
+          refreshGoogleTasks();
+          refreshGoogleEvents();
+        })
+        .catch((error: any) => {
+          toast.error(error?.message || 'Failed to delete Google Task');
+        });
       return;
     }
 
     deleteTask(id);
+  };
+
+  const handleAddGoogleTask = async (task: {
+    title: string;
+    dueDate?: Date;
+  }) => {
+    try {
+      await createGoogleTask(task);
+      refreshGoogleTasks();
+      refreshGoogleEvents();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to create Google Task');
+      throw error;
+    }
   };
 
   const daysUntilNextPeriod = nextPeriod
@@ -148,13 +181,14 @@ const Index = () => {
             <KanbanBoard
               tasks={boardTasks}
               onAddTask={addTask}
+              onAddGoogleTask={handleAddGoogleTask}
               onMoveTask={handleMoveTask}
               onDeleteTask={handleDeleteTask}
               cycleSettings={cycleSettings}
             />
           </div>
 
-          {/* Right column - Insight and Quick Todos */}
+          {/* Right column - Insight and Upcoming Events */}
           <div className="space-y-6">
             {/* Cycle Insight */}
             {hasCompletedSetup && todayPhase && (
@@ -165,15 +199,64 @@ const Index = () => {
               />
             )}
 
-            <QuickTodoList
-              todos={todos}
-              onAddTodo={addTodo}
-              onToggleTodo={toggleTodo}
-              onDeleteTodo={deleteTodo}
-              onClearCompleted={clearCompleted}
-            />
+            <div className="rounded-2xl border bg-card p-5 shadow-soft">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-foreground">Your upcoming events</h3>
+                <span className="text-xs text-muted-foreground">
+                  {upcomingEvents.length}
+                </span>
+              </div>
+              {upcomingEvents.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No upcoming events.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingEvents.map((event) => {
+                    const isTask = event.source === 'google-task';
+                    const isAllDay =
+                      event.start.getHours() === 0 &&
+                      event.start.getMinutes() === 0 &&
+                      event.end.getHours() >= 23;
 
-
+                    return (
+                      <div
+                        key={event.id}
+                        className="flex items-start gap-3 rounded-lg border border-muted/40 bg-muted/20 px-3 py-2"
+                      >
+                        <span
+                          className={cn(
+                            'mt-1 h-2.5 w-2.5 rounded-full',
+                            isTask ? 'bg-red-500' : 'bg-blue-500'
+                          )}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p
+                              className={cn(
+                                'text-sm font-medium text-foreground',
+                                isTask && event.completed && 'line-through text-muted-foreground'
+                              )}
+                            >
+                              {event.title}
+                            </p>
+                            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                              {isTask ? 'Task' : 'Event'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {format(event.start, 'EEE, MMM d')}
+                            {isSameDay(event.start, event.end) && isAllDay
+                              ? ' • All day'
+                              : ` • ${format(event.start, 'h:mm a')}`}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>

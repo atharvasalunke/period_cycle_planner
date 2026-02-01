@@ -161,8 +161,8 @@ export function CycleCalendar({
               <div className="flex items-start justify-between">
                 <span
                   className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium',
-                    isToday && 'bg-primary text-primary-foreground pulse-soft',
+                    'flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold',
+                    isToday && 'bg-indigo-900 text-primary-foreground pulse-soft',
                     !isToday && isCurrentMonth && 'text-foreground',
                     !isCurrentMonth && 'text-muted-foreground'
                   )}

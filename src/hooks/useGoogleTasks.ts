@@ -93,6 +93,61 @@ export const useGoogleTasks = () => {
     [refresh, user?.id]
   );
 
+  const createTask = useCallback(
+    async (input: { title: string; dueDate?: Date; tasklist?: string }) => {
+      if (!user?.id) return;
+
+      const { title, dueDate, tasklist } = input;
+      const token = localStorage.getItem('auth-token');
+
+      const response = await fetch(`${BACKEND_BASE_URL}/google/calendar/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title,
+          due: dueDate ? dueDate.toISOString() : undefined,
+          tasklist,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to create Google Task');
+      }
+
+      refresh();
+    },
+    [refresh, user?.id]
+  );
+
+  const deleteTask = useCallback(
+    async (taskId: string, tasklist: string = '@default') => {
+      if (!user?.id) return;
+
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch(
+        `${BACKEND_BASE_URL}/google/calendar/tasks/${taskId}?${new URLSearchParams({
+          tasklist,
+        }).toString()}`,
+        {
+          method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete Google Task');
+      }
+
+      refresh();
+    },
+    [refresh, user?.id]
+  );
+
   useEffect(() => {
     const fetchTasks = async () => {
       if (!user?.id) {
@@ -140,5 +195,5 @@ export const useGoogleTasks = () => {
     void fetchTasks();
   }, [user?.id, refreshKey]);
 
-  return { tasks, isLoading, error, refresh, updateTaskStatus };
+  return { tasks, isLoading, error, refresh, updateTaskStatus, deleteTask, createTask };
 };

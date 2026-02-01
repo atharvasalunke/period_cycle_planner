@@ -8,6 +8,7 @@ import { OrganizeTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { CycleSettings } from '@/types';
 import { getCyclePhase, getPhaseInfo } from '@/lib/cycle-utils';
+import { parseDateInput } from '@/lib/date';
 
 interface AiOrganizerPanelProps {
   tasks: OrganizeTask[];
@@ -16,7 +17,6 @@ interface AiOrganizerPanelProps {
   followUps: string[];
   onApplyToBoard: () => void;
   onApplyToCalendar: () => void;
-  onApplyAll: () => void;
   onReset: () => void;
   onUpdateTask: (index: number, task: Partial<OrganizeTask>) => void;
   onDeleteTask: (index: number) => void;
@@ -42,7 +42,6 @@ export function AiOrganizerPanel({
   followUps,
   onApplyToBoard,
   onApplyToCalendar,
-  onApplyAll,
   onReset,
   onUpdateTask,
   onDeleteTask,
@@ -60,7 +59,7 @@ export function AiOrganizerPanel({
     if (!cycleSettings || !dueDateISO) return null;
     
     try {
-      const { phase, dayOfCycle } = getCyclePhase(new Date(dueDateISO), cycleSettings);
+      const { phase, dayOfCycle } = getCyclePhase(parseDateInput(dueDateISO), cycleSettings);
       const phaseInfo = getPhaseInfo(phase);
       const phaseColors: Record<string, { bg: string; border: string; text: string }> = {
         period: { bg: 'bg-phase-period-light', border: 'border-phase-period', text: 'text-phase-period' },
@@ -349,14 +348,6 @@ export function AiOrganizerPanel({
           >
             Apply to Calendar
           </Button>
-          <Button
-            onClick={onApplyAll}
-            size="sm"
-            className="w-full bg-primary hover:bg-primary/90"
-            disabled={!hasTasks}
-          >
-            Apply All
-          </Button>
         </div>
 
         <p className="text-xs text-center text-gray-500 pt-2 border-t border-gray-100">
@@ -366,4 +357,3 @@ export function AiOrganizerPanel({
     </div>
   );
 }
-

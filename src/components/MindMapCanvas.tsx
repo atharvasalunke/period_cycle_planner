@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { CycleSettings } from '@/types';
 import { getCyclePhase, getPhaseInfo } from '@/lib/cycle-utils';
+import { parseDateInput } from '@/lib/date';
 
 interface CanvasItem {
   id: string;
@@ -680,7 +681,7 @@ export function MindMapCanvas({
                     </div>
                     {cycleSettings && task.dueDateISO && (() => {
                       try {
-                        const { phase, dayOfCycle } = getCyclePhase(new Date(task.dueDateISO), cycleSettings);
+                        const { phase, dayOfCycle } = getCyclePhase(parseDateInput(task.dueDateISO), cycleSettings);
                         const phaseInfo = getPhaseInfo(phase);
                         const phaseColors: Record<string, { bg: string; border: string; text: string }> = {
                           period: { bg: 'bg-phase-period-light', border: 'border-phase-period', text: 'text-phase-period' },
@@ -964,4 +965,3 @@ export function MindMapCanvas({
     </div>
   );
 }
-
