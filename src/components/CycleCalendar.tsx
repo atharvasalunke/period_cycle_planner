@@ -175,7 +175,7 @@ export function CycleCalendar({
               {phaseInfo && isCurrentMonth && showCyclePhases && (
                 <div
                   className={cn(
-                    'absolute inset-0 opacity-30 pointer-events-none',
+                    'absolute inset-0 opacity-75 pointer-events-none',
                     phaseBackgrounds[phaseInfo.phase]
                   )}
                 />
@@ -242,19 +242,19 @@ export function CycleCalendar({
         <div className="p-4 border-t bg-muted/30">
           <div className="flex flex-wrap gap-4 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-period" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-period-light" />
               <span className="text-muted-foreground">Period</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-follicular" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-follicular-light" />
               <span className="text-muted-foreground">Follicular</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-ovulation" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-ovulation-light" />
               <span className="text-muted-foreground">Fertile Window</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-phase-luteal" />
+              <span className="h-2.5 w-2.5 rounded-full bg-phase-luteal-light" />
               <span className="text-muted-foreground">Luteal</span>
             </div>
           </div>

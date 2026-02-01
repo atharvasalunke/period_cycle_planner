@@ -50,15 +50,15 @@
 
     --radius: 0.75rem;
 
-    /* Cycle phase colors - soft, non-clinical */
-    --phase-period: 0 55% 75%;
-    --phase-period-light: 0 55% 94%;
-    --phase-follicular: 260 45% 75%;
-    --phase-follicular-light: 260 45% 94%;
-    --phase-ovulation: 150 35% 70%;
-    --phase-ovulation-light: 150 35% 92%;
-    --phase-luteal: 35 40% 75%;
-    --phase-luteal-light: 35 40% 94%;
+    /* Cycle phase colors - bright & vibrant for light mode */
+    --phase-period: 0 85% 55%;
+    --phase-period-light: 0 70% 85%;
+    --phase-follicular: 260 85% 60%;
+    --phase-follicular-light: 260 60% 88%;
+    --phase-ovulation: 150 90% 35%;
+    --phase-ovulation-light: 150 50% 85%;
+    --phase-luteal: 35 90% 50%;
+    --phase-luteal-light: 35 60% 88%;
 
     /* Task colors */
     --task-low: 150 30% 70%;
@@ -79,7 +79,7 @@
     --gradient-calm: linear-gradient(135deg, hsl(260 45% 95%), hsl(150 25% 95%));
     --gradient-period: linear-gradient(135deg, hsl(0 55% 85%), hsl(0 55% 75%));
     --gradient-fertile: linear-gradient(135deg, hsl(150 35% 85%), hsl(150 35% 70%));
-    
+
     /* Shadows */
     --shadow-soft: 0 2px 8px -2px hsl(260 20% 20% / 0.08);
     --shadow-card: 0 4px 16px -4px hsl(260 20% 20% / 0.1);
@@ -118,14 +118,14 @@
     --input: 260 15% 20%;
     --ring: 260 45% 70%;
 
-    --phase-period: 0 45% 55%;
-    --phase-period-light: 0 35% 20%;
-    --phase-follicular: 260 35% 55%;
-    --phase-follicular-light: 260 25% 20%;
-    --phase-ovulation: 150 30% 45%;
-    --phase-ovulation-light: 150 20% 18%;
-    --phase-luteal: 35 35% 50%;
-    --phase-luteal-light: 35 25% 18%;
+    --phase-period: 0 85% 70%;
+    --phase-period-light: 0 45% 25%;
+    --phase-follicular: 260 85% 75%;
+    --phase-follicular-light: 260 35% 25%;
+    --phase-ovulation: 150 75% 65%;
+    --phase-ovulation-light: 150 30% 25%;
+    --phase-luteal: 35 85% 70%;
+    --phase-luteal-light: 35 35% 25%;
 
     --sidebar-background: 260 18% 12%;
     --sidebar-foreground: 30 25% 90%;
@@ -163,6 +163,7 @@
 }
 
 @layer components {
+
   /* Custom scrollbar */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -220,6 +221,7 @@
 }
 
 @layer utilities {
+
   /* Animation utilities */
   .animate-fade-in {
     animation: fadeIn 0.4s ease-out;
@@ -237,6 +239,7 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -247,6 +250,7 @@
       opacity: 0;
       transform: translateY(10px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -258,6 +262,7 @@
       opacity: 0;
       transform: scale(0.95);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -270,9 +275,12 @@
   }
 
   @keyframes pulseSoft {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
     }
+
     50% {
       box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
     }
