@@ -9,7 +9,7 @@ const requiredIdentityScopes = [
 const defaultScopes = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.readonly",
-  "https://www.googleapis.com/auth/tasks.readonly",
+  "https://www.googleapis.com/auth/tasks",
   ...requiredIdentityScopes,
 ];
 

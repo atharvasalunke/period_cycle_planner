@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { differenceInDays } from 'date-fns';
 import { Header } from '@/components/Header';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -11,7 +11,10 @@ import { useCycleData } from '@/hooks/useCycleData';
 import { useTasks } from '@/hooks/useTasks';
 import { useQuickTodos } from '@/hooks/useQuickTodos';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
+import { useGoogleTasks } from '@/hooks/useGoogleTasks';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { CycleSettings } from '@/types';
+import { toast } from 'sonner';
 
 const Index = () => {
   const {
@@ -28,8 +31,25 @@ const Index = () => {
   const [showCyclePhases, setShowCyclePhases] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [googleTaskOverrides, setGoogleTaskOverrides] = useLocalStorage<
+    Record<string, 'todo' | 'inProgress' | 'done'>
+  >('google-task-overrides', {});
 
-  const { events: googleEvents } = useGoogleCalendarEvents(calendarMonth);
+  const { events: googleEvents, refresh: refreshGoogleEvents } =
+    useGoogleCalendarEvents(calendarMonth);
+  const { tasks: googleTasks, refresh: refreshGoogleTasks, updateTaskStatus } =
+    useGoogleTasks();
+
+  const boardTasks = useMemo(
+    () => [
+      ...googleTasks.map((task) => ({
+        ...task,
+        status: googleTaskOverrides[task.id] ?? task.status,
+      })),
+      ...tasks,
+    ],
+    [googleTaskOverrides, googleTasks, tasks]
+  );
 
   const handleOnboardingComplete = (settings: CycleSettings) => {
     setCycleSettings(settings);
@@ -40,6 +60,63 @@ const Index = () => {
     localStorage.removeItem('tasks');
     localStorage.removeItem('quick-todos');
     window.location.reload();
+  };
+
+  const handleMoveTask = async (id: string, status: 'todo' | 'inProgress' | 'done') => {
+    const target = boardTasks.find((task) => task.id === id);
+    if (target?.source === 'google-task') {
+      const setOverride = (next?: 'todo' | 'inProgress' | 'done') => {
+        setGoogleTaskOverrides((prev) => {
+          const updated = { ...prev };
+          if (next) {
+            updated[target.id] = next;
+          } else {
+            delete updated[target.id];
+          }
+          return updated;
+        });
+      };
+
+      const previousStatus = googleTaskOverrides[target.id] ?? target.status;
+
+      if (status === 'inProgress') {
+        setOverride('inProgress');
+        try {
+          await updateTaskStatus(target.externalId ?? id, 'todo', target.externalListId);
+          refreshGoogleTasks();
+          refreshGoogleEvents();
+        } catch (error: any) {
+          setOverride(previousStatus);
+          toast.error(error?.message || 'Failed to update Google Task');
+        }
+        return;
+      }
+
+      const taskStatus = status === 'done' ? 'done' : 'todo';
+      setOverride(taskStatus);
+      try {
+        await updateTaskStatus(target.externalId ?? id, taskStatus, target.externalListId);
+        refreshGoogleTasks();
+        refreshGoogleEvents();
+        setOverride(undefined);
+      } catch (error: any) {
+        setOverride(previousStatus);
+        toast.error(error?.message || 'Failed to update Google Task');
+      }
+      return;
+    }
+
+    moveTask(id, status);
+  };
+
+  const handleDeleteTask = (id: string) => {
+    const target = boardTasks.find((task) => task.id === id);
+    if (target?.source === 'google-task') {
+      toast.message('Google Tasks can be deleted only from Google.');
+      return;
+    }
+
+    deleteTask(id);
   };
 
   const daysUntilNextPeriod = nextPeriod
@@ -69,10 +146,10 @@ const Index = () => {
 
             {/* Kanban Board */}
             <KanbanBoard
-              tasks={tasks}
+              tasks={boardTasks}
               onAddTask={addTask}
-              onMoveTask={moveTask}
-              onDeleteTask={deleteTask}
+              onMoveTask={handleMoveTask}
+              onDeleteTask={handleDeleteTask}
               cycleSettings={cycleSettings}
             />
           </div>
