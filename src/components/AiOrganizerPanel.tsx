@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, CheckCircle2, FileText, Lightbulb, X, GripVertical, LayoutGrid, List, Eye } from 'lucide-react';
+import { Calendar, Trash2, CheckCircle2, FileText, Lightbulb, X, GripVertical, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { OrganizeTask } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { MixboardView } from './MixboardView';
+import { CycleSettings } from '@/types';
+import { getCyclePhase, getPhaseInfo } from '@/lib/cycle-utils';
+import { parseDateInput } from '@/lib/date';
 
 interface AiOrganizerPanelProps {
   tasks: OrganizeTask[];
@@ -15,7 +17,6 @@ interface AiOrganizerPanelProps {
   followUps: string[];
   onApplyToBoard: () => void;
   onApplyToCalendar: () => void;
-  onApplyAll: () => void;
   onReset: () => void;
   onUpdateTask: (index: number, task: Partial<OrganizeTask>) => void;
   onDeleteTask: (index: number) => void;
@@ -24,7 +25,15 @@ interface AiOrganizerPanelProps {
   onVisualize?: () => void;
   clearAfterApply: boolean;
   onClearAfterApplyChange: (value: boolean) => void;
+  cycleSettings?: CycleSettings | null;
 }
+
+const phaseDots: Record<string, string> = {
+  period: 'bg-phase-period',
+  follicular: 'bg-phase-follicular',
+  ovulation: 'bg-phase-ovulation',
+  luteal: 'bg-phase-luteal',
+};
 
 export function AiOrganizerPanel({
   tasks,
@@ -33,7 +42,6 @@ export function AiOrganizerPanel({
   followUps,
   onApplyToBoard,
   onApplyToCalendar,
-  onApplyAll,
   onReset,
   onUpdateTask,
   onDeleteTask,
@@ -42,10 +50,48 @@ export function AiOrganizerPanel({
   onVisualize,
   clearAfterApply,
   onClearAfterApplyChange,
+  cycleSettings,
 }: AiOrganizerPanelProps) {
-  const [viewMode, setViewMode] = useState<'mixboard' | 'list'>('mixboard');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const renderCyclePhaseBadge = (dueDateISO: string) => {
+    if (!cycleSettings || !dueDateISO) return null;
+    
+    try {
+      const { phase, dayOfCycle } = getCyclePhase(parseDateInput(dueDateISO), cycleSettings);
+      const phaseInfo = getPhaseInfo(phase);
+      const phaseColors: Record<string, { bg: string; border: string; text: string }> = {
+        period: { bg: 'bg-phase-period-light', border: 'border-phase-period', text: 'text-phase-period' },
+        follicular: { bg: 'bg-phase-follicular-light', border: 'border-phase-follicular', text: 'text-phase-follicular' },
+        ovulation: { bg: 'bg-phase-ovulation-light', border: 'border-phase-ovulation', text: 'text-phase-ovulation' },
+        luteal: { bg: 'bg-phase-luteal-light', border: 'border-phase-luteal', text: 'text-phase-luteal' },
+      };
+      const colors = phaseColors[phase] || phaseColors.period;
+      
+      return (
+        <div className={cn(
+          "flex items-center gap-2 px-3 py-1.5 rounded-full border-2",
+          colors.bg,
+          colors.border,
+          colors.text
+        )}>
+          <span
+            className={cn(
+              'h-2.5 w-2.5 rounded-full',
+              phaseDots[phase] || 'bg-muted-foreground'
+            )}
+          />
+          <span className="text-xs font-medium">
+            {phaseInfo.name} (Day {dayOfCycle})
+          </span>
+        </div>
+      );
+    } catch (error) {
+      console.error('Error rendering cycle phase badge:', error);
+      return null;
+    }
+  };
 
   const hasTasks = tasks.length > 0;
   const hasContent = hasTasks || notes.length > 0 || suggestions.length > 0;
@@ -93,7 +139,7 @@ export function AiOrganizerPanel({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden min-h-[600px] flex flex-col">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden min-h-[600px] flex flex-col max-w-full">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5 text-primary" />
@@ -105,26 +151,6 @@ export function AiOrganizerPanel({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {hasTasks && (
-            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1">
-              <Button
-                variant={viewMode === 'mixboard' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('mixboard')}
-                className="h-7 px-2"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="h-7 px-2"
-              >
-                <List className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
           <Button
             variant="ghost"
             size="sm"
@@ -136,22 +162,9 @@ export function AiOrganizerPanel({
         </div>
       </div>
 
-      <div className={cn(
-        "flex-1 overflow-y-auto space-y-6",
-        viewMode === 'mixboard' ? "p-0" : "p-6"
-      )}>
+      <div className="flex-1 overflow-y-auto space-y-6 p-6">
         {/* Detected Tasks */}
-        {hasTasks && viewMode === 'mixboard' && (
-          <div className="p-6">
-            <MixboardView
-              tasks={tasks}
-              onUpdateTask={onUpdateTask}
-              onDeleteTask={onDeleteTask}
-              onMoveTask={onMoveTask}
-            />
-          </div>
-        )}
-        {hasTasks && viewMode === 'list' && (
+        {hasTasks && (
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-4">
               Detected Tasks
@@ -195,18 +208,21 @@ export function AiOrganizerPanel({
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      type="date"
-                      value={task.dueDateISO || ''}
-                      onChange={(e) =>
-                        onUpdateTask(index, {
-                          dueDateISO: e.target.value || null,
-                        })
-                      }
-                      className="text-xs h-8 border-gray-200 bg-white"
-                    />
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        type="date"
+                        value={task.dueDateISO || ''}
+                        onChange={(e) =>
+                          onUpdateTask(index, {
+                            dueDateISO: e.target.value || null,
+                          })
+                        }
+                        className="text-xs h-8 border-gray-200 bg-white"
+                      />
+                    </div>
+                    {renderCyclePhaseBadge(task.dueDateISO || '')}
                     {task.category && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                         {task.category}
@@ -311,7 +327,7 @@ export function AiOrganizerPanel({
               disabled={!hasTasks}
             >
               <Eye className="h-4 w-4 mr-2" />
-              Visualize on Mixboard
+              Visualize on Mind Map
             </Button>
           )}
           <Button
@@ -332,14 +348,6 @@ export function AiOrganizerPanel({
           >
             Apply to Calendar
           </Button>
-          <Button
-            onClick={onApplyAll}
-            size="sm"
-            className="w-full bg-primary hover:bg-primary/90"
-            disabled={!hasTasks}
-          >
-            Apply All
-          </Button>
         </div>
 
         <p className="text-xs text-center text-gray-500 pt-2 border-t border-gray-100">
@@ -349,4 +357,3 @@ export function AiOrganizerPanel({
     </div>
   );
 }
-

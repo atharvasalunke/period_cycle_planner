@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from dotenv import load_dotenv
 from schemas import OrganizeRequest, OrganizeResponse, ChatWithTasksRequest, ChatWithTasksResponse
-from gemini_client import organize_text, chat_with_tasks
-from elevenlabs_client import transcribe_audio
+from gemini_client import organize_text, chat_with_tasks, generate_welcome_message
+from elevenlabs_client import transcribe_audio, text_to_speech
 
 # Load environment variables
 load_dotenv()
@@ -29,6 +29,37 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/welcome-message")
+async def get_welcome_message(cycle_phase: str = None, day_of_cycle: int = None):
+    """
+    Get a personalized welcome message audio file using ElevenLabs TTS.
+    Plays when user clicks the speaker button.
+    Messages are personalized based on the user's current cycle phase.
+    """
+    try:
+        # Generate personalized welcome message using Gemini
+        welcome_text = generate_welcome_message(cycle_phase, day_of_cycle)
+        
+        audio_bytes = text_to_speech(welcome_text)
+        
+        from fastapi.responses import Response
+        return Response(
+            content=audio_bytes,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "inline; filename=welcome.mp3",
+                "Cache-Control": "no-cache, no-store, must-revalidate",  # Disable caching for variety
+                "Pragma": "no-cache",
+                "Expires": "0",
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate welcome message: {str(e)}"
+        )
 
 
 @app.post("/organize", response_model=OrganizeResponse)
@@ -58,27 +89,67 @@ async def organize(request: OrganizeRequest):
             )
         
         # Call Gemini to organize text only (images are for visualization only)
+        cycle_calendar = None
+        if request.cyclePhaseCalendar:
+            cycle_calendar = [
+                {"date": item.date, "phase": item.phase, "dayOfCycle": item.dayOfCycle}
+                for item in request.cyclePhaseCalendar
+            ]
         result = organize_text(
             text=request.text.strip(),
             today_iso=request.todayISO,
-            timezone=request.timezone or "UTC"
+            timezone=request.timezone or "UTC",
+            cycle_phase_calendar=cycle_calendar
         )
         
         print(f"Organization complete: {len(result.tasks)} tasks, {len(result.notes)} notes")
         return result
-        
-    except ValueError as e:
-        print(f"ValueError: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Error processing: {str(e)}"
+        )
+
+
+@app.post("/chat-tasks", response_model=ChatWithTasksResponse)
+async def chat_tasks(request: ChatWithTasksRequest):
+    """
+    Chat with Gemini about existing tasks.
+    Can answer questions, create new tasks, or update existing ones.
+    """
+    try:
+        print(f"Received chat request: message length={len(request.message)}, tasks={len(request.tasks)}")
+        
+        # Convert TaskItem objects to dicts for gemini_client
+        tasks_list = [
+            {
+                "title": task.title,
+                "dueDateISO": task.dueDateISO,
+                "category": task.category,
+                "confidence": task.confidence,
+                "sourceSpan": task.sourceSpan
+            }
+            for task in request.tasks
+        ]
+        
+        result = chat_with_tasks(
+            message=request.message,
+            tasks=tasks_list,
+            today_iso=request.todayISO,
+            timezone=request.timezone or "UTC"
+        )
+        
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing chat: {str(e)}"
         )
 
 
@@ -86,127 +157,41 @@ async def organize(request: OrganizeRequest):
 async def transcribe(audio: UploadFile = File(...)):
     """
     Transcribe audio to text using ElevenLabs Speech-to-Text API.
-    Supports various audio formats: WAV, MP3, M4A, OGG, etc.
     """
     try:
-        print(f"📥 Received audio file: filename={audio.filename}, content_type={audio.content_type}")
-        audio_data = await audio.read()
+        print(f"Received transcription request: {audio.filename}, content_type: {audio.content_type}")
         
-        print(f"📊 Audio file details:")
-        print(f"   - Size: {len(audio_data)} bytes ({len(audio_data) / 1024:.2f} KB)")
-        print(f"   - Content type: {audio.content_type}")
-        print(f"   - Filename: {audio.filename}")
+        # Read audio file
+        audio_bytes = await audio.read()
         
-        # Log first few bytes for debugging
-        if len(audio_data) > 0:
-            first_bytes = ' '.join(f'{b:02x}' for b in audio_data[:20])
-            print(f"   - First 20 bytes (hex): {first_bytes}")
-            
-            # Check for common audio file signatures
-            if audio_data[:4] == bytes([0x1a, 0x45, 0xdf, 0xa3]):
-                print("   ✅ Detected WebM/Matroska format")
-            elif audio_data[:4] == bytes([0x52, 0x49, 0x46, 0x46]):
-                print("   ✅ Detected WAV/RIFF format")
-            elif audio_data[:2] == bytes([0xff, 0xfb]) or audio_data[:2] == bytes([0xff, 0xf3]):
-                print("   ✅ Detected MP3 format")
-            else:
-                print("   ⚠️ Unknown audio format signature")
-        
-        # Validate file size (max 3GB per ElevenLabs docs)
-        if len(audio_data) > 3 * 1024 * 1024 * 1024:
-            raise HTTPException(
-                status_code=400,
-                detail="Audio file too large. Maximum size is 3GB."
-            )
-        
-        # Check if audio data is empty
-        if len(audio_data) == 0:
+        if not audio_bytes or len(audio_bytes) == 0:
             raise HTTPException(
                 status_code=400,
                 detail="Audio file is empty"
             )
         
-        # Warn if very small
-        if len(audio_data) < 5000:
-            print(f"   ⚠️ Warning: Audio file is very small ({len(audio_data)} bytes). Might not contain enough speech.")
+        print(f"Audio file size: {len(audio_bytes)} bytes")
         
-        # Run transcription with timeout
-        import asyncio
-        try:
-            print(f"🔄 Sending to ElevenLabs for transcription...")
-            text = await asyncio.wait_for(
-                asyncio.to_thread(transcribe_audio, audio_data),
-                timeout=60.0  # 60 second timeout
-            )
-            print(f"✅ Transcription successful: {len(text)} characters")
-            return {"text": text}
-        except asyncio.TimeoutError:
+        # Transcribe using ElevenLabs
+        transcribed_text = transcribe_audio(audio_bytes)
+        
+        if not transcribed_text or not transcribed_text.strip():
             raise HTTPException(
-                status_code=504,
-                detail="Transcription timeout. Please try with a shorter audio clip."
+                status_code=400,
+                detail="Empty transcription returned from ElevenLabs API. This might mean: (1) Audio file is empty or corrupted, (2) Audio has no speech/sound, (3) Audio format is not supported."
             )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        
+        print(f"Transcription successful: {len(transcribed_text)} characters")
+        return {"text": transcribed_text}
+        
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Transcription error: {str(e)}"
-        )
-
-
-@app.post("/chat-tasks", response_model=ChatWithTasksResponse)
-async def chat_tasks(request: ChatWithTasksRequest):
-    """
-    Chat with Gemini about existing tasks. Can answer questions, suggest updates, or create new tasks.
-    """
-    try:
-        print(f"Received chat request: message length={len(request.message)}, tasks={len(request.tasks)}")
-        
-        # Validate date format
-        try:
-            datetime.strptime(request.todayISO, "%Y-%m-%d")
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid date format. Use YYYY-MM-DD"
-            )
-        
-        # Validate message is not empty
-        if not request.message or not request.message.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="Message cannot be empty"
-            )
-        
-        # Call Gemini to chat about tasks
-        result = chat_with_tasks(
-            message=request.message.strip(),
-            tasks=request.tasks,
-            today_iso=request.todayISO,
-            timezone=request.timezone or "UTC"
-        )
-        
-        print(f"Chat complete: response length={len(result.response)}")
-        return result
-        
-    except ValueError as e:
-        print(f"ValueError: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Unexpected error: {e}")
         import traceback
         traceback.print_exc()
+        error_msg = str(e)
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Failed to transcribe audio: {error_msg}"
         )
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 

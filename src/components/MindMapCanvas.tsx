@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { CycleSettings } from '@/types';
-import { getCyclePhase } from '@/lib/cycle-utils';
+import { getCyclePhase, getPhaseInfo } from '@/lib/cycle-utils';
 import { parseDateInput } from '@/lib/date';
 
 interface CanvasItem {
@@ -48,7 +48,7 @@ export function MindMapCanvas({
   onOrganizeText,
   uploadedImages = [],
   cycleSettings,
-}: MixboardCanvasProps) {
+}: MindMapCanvasProps) {
   const [items, setItems] = useState<CanvasItem[]>([]);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -662,30 +662,57 @@ export function MindMapCanvas({
                   </button>
                 </div>
                 {task.dueDateISO && (
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
-                    <Calendar className="h-3 w-3" />
-                    <Input
-                      type="date"
-                      value={task.dueDateISO || ''}
-                      onChange={(e) => {
-                        if (isValidIndex) {
-                          onUpdateTask(taskIndex, {
-                            dueDateISO: e.target.value || null,
-                          });
-                        }
-                      }}
-                      className="text-xs h-7 border-gray-200 bg-white"
-                      onMouseDown={(e) => e.stopPropagation()}
-                    />
-                    {cycleSettings && task.dueDateISO && (
-                      <span
-                        className={cn(
-                          'h-2 w-2 rounded-full',
-                          phaseDots[getCyclePhase(parseDateInput(task.dueDateISO), cycleSettings).phase] || 'bg-muted-foreground'
-                        )}
-                        title={`${getCyclePhase(parseDateInput(task.dueDateISO), cycleSettings).phase.charAt(0).toUpperCase() + getCyclePhase(parseDateInput(task.dueDateISO), cycleSettings).phase.slice(1)} phase`}
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <Calendar className="h-3 w-3" />
+                      <Input
+                        type="date"
+                        value={task.dueDateISO || ''}
+                        onChange={(e) => {
+                          if (isValidIndex) {
+                            onUpdateTask(taskIndex, {
+                              dueDateISO: e.target.value || null,
+                            });
+                          }
+                        }}
+                        className="text-xs h-7 border-gray-200 bg-white"
+                        onMouseDown={(e) => e.stopPropagation()}
                       />
-                    )}
+                    </div>
+                    {cycleSettings && task.dueDateISO && (() => {
+                      try {
+                        const { phase, dayOfCycle } = getCyclePhase(parseDateInput(task.dueDateISO), cycleSettings);
+                        const phaseInfo = getPhaseInfo(phase);
+                        const phaseColors: Record<string, { bg: string; border: string; text: string }> = {
+                          period: { bg: 'bg-phase-period-light', border: 'border-phase-period', text: 'text-phase-period' },
+                          follicular: { bg: 'bg-phase-follicular-light', border: 'border-phase-follicular', text: 'text-phase-follicular' },
+                          ovulation: { bg: 'bg-phase-ovulation-light', border: 'border-phase-ovulation', text: 'text-phase-ovulation' },
+                          luteal: { bg: 'bg-phase-luteal-light', border: 'border-phase-luteal', text: 'text-phase-luteal' },
+                        };
+                        const colors = phaseColors[phase] || phaseColors.period;
+                        return (
+                          <div className={cn(
+                            "flex items-center gap-2 px-2 py-1 rounded-full border-2 text-xs",
+                            colors.bg,
+                            colors.border,
+                            colors.text
+                          )}>
+                            <span
+                              className={cn(
+                                'h-2 w-2 rounded-full',
+                                phaseDots[phase] || 'bg-muted-foreground'
+                              )}
+                            />
+                            <span className="font-medium">
+                              {phaseInfo.name} (Day {dayOfCycle})
+                            </span>
+                          </div>
+                        );
+                      } catch (error) {
+                        console.error('Error rendering cycle phase:', error);
+                        return null;
+                      }
+                    })()}
                   </div>
                 )}
                 {task.category && (

@@ -123,4 +123,137 @@ googleCalendarRouter.get("/tasks", async (req, res) => {
   }
 });
 
+googleCalendarRouter.post("/tasks", async (req, res) => {
+  try {
+    let userId: string | undefined;
+    try {
+      userId = resolveUserId(req);
+    } catch {
+      return res.status(401).json({ error: "Invalid token." });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId." });
+    }
+
+    const tasksClient = await getTasksClient(userId);
+    if (!tasksClient) {
+      return res.status(401).json({ error: "Google account not connected." });
+    }
+
+    const { title, due, tasklist } = req.body ?? {};
+    if (typeof title !== "string" || !title.trim()) {
+      return res.status(400).json({ error: "Missing task title." });
+    }
+
+    const targetTasklist =
+      typeof tasklist === "string" && tasklist.trim() ? tasklist : "@default";
+
+    let dueIso: string | undefined;
+    if (typeof due === "string" && due.trim()) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+        dueIso = `${due}T00:00:00.000Z`;
+      } else {
+        const parsed = new Date(due);
+        if (Number.isNaN(parsed.getTime())) {
+          return res.status(400).json({ error: "Invalid due date." });
+        }
+        dueIso = parsed.toISOString();
+      }
+    }
+
+    const response = await tasksClient.tasks.insert({
+      tasklist: targetTasklist,
+      requestBody: {
+        title: title.trim(),
+        due: dueIso,
+        status: "needsAction",
+      },
+    });
+
+    return res.status(201).json({ item: response.data });
+  } catch (error) {
+    console.error("Failed to create Google Task", error);
+    return res.status(500).json({ error: "Failed to create task." });
+  }
+});
+
+googleCalendarRouter.patch("/tasks/:taskId", async (req, res) => {
+  try {
+    let userId: string | undefined;
+    try {
+      userId = resolveUserId(req);
+    } catch {
+      return res.status(401).json({ error: "Invalid token." });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId." });
+    }
+
+    const tasksClient = await getTasksClient(userId);
+    if (!tasksClient) {
+      return res.status(401).json({ error: "Google account not connected." });
+    }
+
+    const taskId = req.params.taskId;
+    const { status, tasklist } = req.body ?? {};
+    const normalizedStatus = status === "completed" ? "completed" : "needsAction";
+    const targetTasklist =
+      typeof tasklist === "string" && tasklist.trim() ? tasklist : "@default";
+
+    const requestBody =
+      normalizedStatus === "completed"
+        ? { status: "completed", completed: new Date().toISOString() }
+        : { status: "needsAction", completed: null };
+
+    const response = await tasksClient.tasks.patch({
+      tasklist: targetTasklist,
+      task: taskId,
+      requestBody,
+    });
+
+    return res.json({ item: response.data });
+  } catch (error) {
+    console.error("Failed to update Google Task", error);
+    return res.status(500).json({ error: "Failed to update task." });
+  }
+});
+
+googleCalendarRouter.delete("/tasks/:taskId", async (req, res) => {
+  try {
+    let userId: string | undefined;
+    try {
+      userId = resolveUserId(req);
+    } catch {
+      return res.status(401).json({ error: "Invalid token." });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId." });
+    }
+
+    const tasksClient = await getTasksClient(userId);
+    if (!tasksClient) {
+      return res.status(401).json({ error: "Google account not connected." });
+    }
+
+    const taskId = req.params.taskId;
+    const tasklist =
+      typeof req.query.tasklist === "string" && req.query.tasklist.trim()
+        ? req.query.tasklist
+        : "@default";
+
+    await tasksClient.tasks.delete({
+      tasklist,
+      task: taskId,
+    });
+
+    return res.json({ status: "deleted" });
+  } catch (error) {
+    console.error("Failed to delete Google Task", error);
+    return res.status(500).json({ error: "Failed to delete task." });
+  }
+});
+
 export { googleCalendarRouter };

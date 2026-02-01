@@ -18,14 +18,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Task, TaskStatus, TaskPriority } from '@/types';
+import { Switch } from '@/components/ui/switch';
+import { Task, TaskStatus, TaskPriority, CycleSettings } from '@/types';
 import { cn } from '@/lib/utils';
+import { getCyclePhase } from '@/lib/cycle-utils';
+import { parseDateInput } from '@/lib/date';
 
 interface KanbanBoardProps {
   tasks: Task[];
   onAddTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  onAddGoogleTask?: (task: { title: string; dueDate?: Date; priority?: TaskPriority }) => Promise<void>;
   onMoveTask: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
+  cycleSettings?: CycleSettings | null;
 }
 
 const columns: { status: TaskStatus; title: string; color: string }[] = [
@@ -40,29 +45,56 @@ const priorityColors: Record<TaskPriority, string> = {
   high: 'bg-task-high/20 text-task-high',
 };
 
+const phaseDots: Record<string, string> = {
+  period: 'bg-phase-period',
+  follicular: 'bg-phase-follicular',
+  ovulation: 'bg-phase-ovulation',
+  luteal: 'bg-phase-luteal',
+};
+
 export function KanbanBoard({
   tasks,
   onAddTask,
+  onAddGoogleTask,
   onMoveTask,
   onDeleteTask,
+  cycleSettings,
 }: KanbanBoardProps) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>('medium');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const [createInGoogle, setCreateInGoogle] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
-    onAddTask({
-      title: newTaskTitle,
-      status: 'todo',
-      priority: newTaskPriority,
-      dueDate: newTaskDueDate ? new Date(newTaskDueDate) : undefined,
-    });
+
+    const dueDate = newTaskDueDate ? parseDateInput(newTaskDueDate) : undefined;
+
+    try {
+      if (createInGoogle && onAddGoogleTask) {
+        await onAddGoogleTask({
+          title: newTaskTitle,
+          dueDate,
+          priority: newTaskPriority,
+        });
+      } else {
+        onAddTask({
+          title: newTaskTitle,
+          status: 'todo',
+          priority: newTaskPriority,
+          dueDate,
+        });
+      }
+    } catch {
+      return;
+    }
+
     setNewTaskTitle('');
     setNewTaskPriority('medium');
     setNewTaskDueDate('');
+    setCreateInGoogle(false);
     setIsAddingTask(false);
   };
 
@@ -138,6 +170,20 @@ export function KanbanBoard({
                   onChange={(e) => setNewTaskDueDate(e.target.value)}
                 />
               </div>
+              {onAddGoogleTask && (
+                <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm">Add to Google Tasks</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Creates this task in your Google Tasks list.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={createInGoogle}
+                    onCheckedChange={(value) => setCreateInGoogle(Boolean(value))}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
@@ -203,9 +249,18 @@ export function KanbanBoard({
                           </span>
                         )}
                         {task.dueDate && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             {format(task.dueDate, 'MMM d')}
+                            {cycleSettings && (
+                              <span
+                                className={cn(
+                                  'h-2 w-2 rounded-full',
+                                  phaseDots[getCyclePhase(task.dueDate, cycleSettings).phase] || 'bg-muted-foreground'
+                                )}
+                                title={`${getCyclePhase(task.dueDate, cycleSettings).phase.charAt(0).toUpperCase() + getCyclePhase(task.dueDate, cycleSettings).phase.slice(1)} phase`}
+                              />
+                            )}
                           </span>
                         )}
                       </div>

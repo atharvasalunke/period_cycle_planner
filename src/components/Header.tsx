@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, LayoutGrid, Settings, LogOut, User as UserIcon, Sparkles, Moon } from 'lucide-react';
+import { Calendar, LayoutGrid, Settings, LogOut, User as UserIcon, Sparkles, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -49,6 +49,17 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2">
+          {isBrainDumpPage && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="gap-1.5 text-xs"
+            >
+              <Home className="h-3.5 w-3.5" />
+              Back to Home
+            </Button>
+          )}
           {!isBrainDumpPage && (
             <Button
               variant={showCyclePhases ? 'secondary' : 'ghost'}

@@ -15,10 +15,17 @@ export interface OrganizeResponse {
   suggestions: string[];
 }
 
+export interface CyclePhaseDate {
+  date: string; // YYYY-MM-DD
+  phase: string; // 'period' | 'follicular' | 'ovulation' | 'luteal'
+  dayOfCycle: number;
+}
+
 export interface OrganizeRequest {
   text: string;
   todayISO: string; // YYYY-MM-DD
   timezone?: string;
+  cyclePhaseCalendar?: CyclePhaseDate[]; // Calendar of cycle phases for upcoming dates
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -26,7 +33,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 export async function organizeText(
   text: string,
   todayISO: string,
-  timezone: string = 'UTC'
+  timezone: string = 'UTC',
+  cyclePhaseCalendar?: CyclePhaseDate[]
 ): Promise<OrganizeResponse> {
   // Only send text to Gemini, images are for visualization only
   const response = await fetch(`${API_BASE_URL}/organize`, {
@@ -38,6 +46,7 @@ export async function organizeText(
       text,
       todayISO,
       timezone,
+      cyclePhaseCalendar,
     }),
   });
 
@@ -123,5 +132,30 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
     }
     throw new Error('Failed to transcribe audio');
   }
+}
+
+export async function getWelcomeMessage(cyclePhase?: string, dayOfCycle?: number): Promise<Blob> {
+  const params = new URLSearchParams();
+  if (cyclePhase) {
+    params.append('cycle_phase', cyclePhase);
+  }
+  if (dayOfCycle) {
+    params.append('day_of_cycle', dayOfCycle.toString());
+  }
+  // Add cache-busting timestamp to ensure fresh response
+  params.append('_t', Date.now().toString());
+  
+  const url = `${API_BASE_URL}/welcome-message?${params.toString()}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    cache: 'no-store', // Prevent browser caching
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.blob();
 }
 
