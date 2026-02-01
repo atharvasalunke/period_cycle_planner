@@ -13,6 +13,7 @@ services:
       - ./certbot/www:/var/www/certbot:ro
     depends_on:
       - api
+      - ai
     restart: unless-stopped
 
   api:
@@ -23,6 +24,16 @@ services:
       - ./backend/.env
     ports:
       - "4000:4000"
+    restart: unless-stopped
+
+  ai:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.python
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
     restart: unless-stopped
 
   certbot:
