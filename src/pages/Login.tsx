@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '@/components/AuthLayout';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { user, login, googleLogin } = useAuth();
     const navigate = useNavigate();
@@ -39,22 +41,13 @@ const Login = () => {
         }
     };
 
-    const handleGoogleLogin = async () => {
-        try {
-            setIsLoading(true);
-            await googleLogin();
-            toast.success('Signed in with Google');
-            navigate('/');
-        } catch (error) {
-            toast.error('Google sign-in failed');
-        } finally {
-            setIsLoading(false);
-        }
+    const handleGoogleLogin = () => {
+        googleLogin();
     };
 
     return (
         <AuthLayout
-            title="Welcome Back"
+            title="Welcome "
             subtitle="Sign in to your cycle planner account"
         >
             <form onSubmit={handleLogin} className="space-y-4">
@@ -81,16 +74,29 @@ const Login = () => {
                             Forgot password?
                         </Link>
                     </div>
-                    <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading}
-                        className="rounded-xl border-muted-foreground/20 focus-visible:ring-primary"
-                        required
-                    />
+                    <div className="relative">
+                        <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={isLoading}
+                            className="rounded-xl border-muted-foreground/20 focus-visible:ring-primary pr-10"
+                            required
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                            ) : (
+                                <Eye className="h-4 w-4" />
+                            )}
+                        </button>
+                    </div>
                 </div>
                 <Button
                     type="submit"
@@ -122,7 +128,7 @@ const Login = () => {
                         fill="#4285F4"
                     />
                     <path
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.04-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
                         fill="#34A853"
                     />
                     <path

@@ -10,6 +10,7 @@ import { QuickTodoList } from '@/components/QuickTodoList';
 import { useCycleData } from '@/hooks/useCycleData';
 import { useTasks } from '@/hooks/useTasks';
 import { useQuickTodos } from '@/hooks/useQuickTodos';
+import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 import { CycleSettings } from '@/types';
 
 const Index = () => {
@@ -26,6 +27,9 @@ const Index = () => {
 
   const [showCyclePhases, setShowCyclePhases] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+
+  const { events: googleEvents } = useGoogleCalendarEvents(calendarMonth);
 
   const handleOnboardingComplete = (settings: CycleSettings) => {
     setCycleSettings(settings);
@@ -52,22 +56,15 @@ const Index = () => {
 
       <main className="container py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column - Calendar and Insight */}
+          {/* Left column - Calendar and Kanban */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Cycle Insight */}
-            {hasCompletedSetup && todayPhase && (
-              <CycleInsightCard
-                phase={todayPhase.phase}
-                dayOfCycle={todayPhase.dayOfCycle}
-                daysUntilNextPeriod={daysUntilNextPeriod}
-              />
-            )}
-
             {/* Calendar */}
             <CycleCalendar
               cycleSettings={cycleSettings}
               tasks={tasks}
+              externalEvents={googleEvents}
               showCyclePhases={showCyclePhases && hasCompletedSetup}
+              onMonthChange={setCalendarMonth}
             />
 
             {/* Kanban Board */}
@@ -80,8 +77,17 @@ const Index = () => {
             />
           </div>
 
-          {/* Right column - Quick Todos */}
+          {/* Right column - Insight and Quick Todos */}
           <div className="space-y-6">
+            {/* Cycle Insight */}
+            {hasCompletedSetup && todayPhase && (
+              <CycleInsightCard
+                phase={todayPhase.phase}
+                dayOfCycle={todayPhase.dayOfCycle}
+                daysUntilNextPeriod={daysUntilNextPeriod}
+              />
+            )}
+
             <QuickTodoList
               todos={todos}
               onAddTodo={addTodo}
@@ -90,23 +96,7 @@ const Index = () => {
               onClearCompleted={clearCompleted}
             />
 
-            {/* Privacy notice */}
-            <div className="rounded-2xl border bg-card p-5 shadow-soft">
-              <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-accent-light flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm">🔒</span>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm text-foreground mb-1">
-                    Your Data, Your Control
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    All your health data stays on your device. We never share or
-                    upload your personal information.
-                  </p>
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
       </main>

@@ -42,8 +42,9 @@ export interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  source: 'google' | 'outlook' | 'manual';
+  source: 'google' | 'google-task' | 'outlook' | 'manual';
   color?: string;
+  completed?: boolean;
 }
 
 // User preferences
