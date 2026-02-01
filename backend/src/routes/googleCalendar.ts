@@ -59,67 +59,6 @@ googleCalendarRouter.get("/events", async (req, res) => {
   }
 });
 
-googleCalendarRouter.post("/events", async (req, res) => {
-  try {
-    let userId: string | undefined;
-    try {
-      userId = resolveUserId(req);
-    } catch {
-      return res.status(401).json({ error: "Invalid token." });
-    }
-
-    if (!userId) {
-      return res.status(400).json({ error: "Missing userId." });
-    }
-
-    const calendar = await getCalendarClient(userId);
-    if (!calendar) {
-      return res.status(401).json({ error: "Google account not connected." });
-    }
-
-    const { title, description, startDate, endDate, allDay } = req.body ?? {};
-    
-    if (typeof title !== "string" || !title.trim()) {
-      return res.status(400).json({ error: "Missing event title." });
-    }
-
-    if (!startDate) {
-      return res.status(400).json({ error: "Missing start date." });
-    }
-
-    let start: { dateTime?: string; date?: string; timeZone?: string };
-    let end: { dateTime?: string; date?: string; timeZone?: string };
-
-    if (allDay) {
-      // All-day event uses date format (YYYY-MM-DD)
-      start = { date: startDate };
-      end = { date: endDate || startDate };
-    } else {
-      // Timed event uses dateTime format
-      start = { dateTime: new Date(startDate).toISOString(), timeZone: "UTC" };
-      const endDateTime = endDate 
-        ? new Date(endDate) 
-        : new Date(new Date(startDate).getTime() + 60 * 60 * 1000); // Default 1 hour
-      end = { dateTime: endDateTime.toISOString(), timeZone: "UTC" };
-    }
-
-    const response = await calendar.events.insert({
-      calendarId: "primary",
-      requestBody: {
-        summary: title.trim(),
-        description: description || "",
-        start,
-        end,
-      },
-    });
-
-    return res.status(201).json({ item: response.data });
-  } catch (error) {
-    console.error("Failed to create Google Calendar event", error);
-    return res.status(500).json({ error: "Failed to create event." });
-  }
-});
-
 googleCalendarRouter.get("/calendars", async (req, res) => {
   try {
     let userId: string | undefined;
