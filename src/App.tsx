@@ -18,7 +18,7 @@ const App = () => {
   try {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
           <TooltipProvider>
             <Toaster />
             <Sonner />
