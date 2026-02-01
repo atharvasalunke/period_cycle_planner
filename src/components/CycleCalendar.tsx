@@ -140,7 +140,7 @@ export function CycleCalendar({
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 auto-rows-[120px]">
         {calendarDays.map((day, index) => {
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isToday = isSameDay(day, today);
@@ -153,23 +153,21 @@ export function CycleCalendar({
               key={index}
               onClick={() => onDateSelect?.(day)}
               className={cn(
-                'relative min-h-[80px] p-2 border-b border-r text-left transition-colors hover:bg-muted/50',
+                'relative h-full overflow-hidden p-2 border-b border-r text-left transition-colors hover:bg-muted/50',
                 !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
                 index % 7 === 6 && 'border-r-0'
               )}
             >
-              <div className="flex items-start justify-between">
-                <span
-                  className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold',
-                    isToday && 'bg-indigo-900 text-primary-foreground pulse-soft',
-                    !isToday && isCurrentMonth && 'text-foreground',
-                    !isCurrentMonth && 'text-muted-foreground'
-                  )}
-                >
-                  {format(day, 'd')}
-                </span>
-              </div>
+              <span
+                className={cn(
+                  'absolute left-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold',
+                  isToday && 'bg-indigo-900 text-primary-foreground pulse-soft',
+                  !isToday && isCurrentMonth && 'text-foreground',
+                  !isCurrentMonth && 'text-muted-foreground'
+                )}
+              >
+                {format(day, 'd')}
+              </span>
 
               {/* Phase background indicator */}
               {phaseInfo && isCurrentMonth && showCyclePhases && (
@@ -191,7 +189,7 @@ export function CycleCalendar({
 
               {/* Tasks + Google Calendar events */}
               {(dayTasks.length > 0 || dayEvents.length > 0) && isCurrentMonth && (
-                <div className="mt-1 space-y-0.5 relative z-10">
+                <div className="absolute left-2 right-2 bottom-2 space-y-0.5 z-10">
                   {dayTasks.slice(0, 2).map((task) => (
                     <div
                       key={task.id}
