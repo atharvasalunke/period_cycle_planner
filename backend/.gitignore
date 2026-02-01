@@ -3,3 +3,5 @@ dist
 .env
 .prisma
 prisma/migrations
+
+.venv/

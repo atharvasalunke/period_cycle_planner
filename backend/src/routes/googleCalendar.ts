@@ -123,4 +123,46 @@ googleCalendarRouter.get("/tasks", async (req, res) => {
   }
 });
 
+googleCalendarRouter.patch("/tasks/:taskId", async (req, res) => {
+  try {
+    let userId: string | undefined;
+    try {
+      userId = resolveUserId(req);
+    } catch {
+      return res.status(401).json({ error: "Invalid token." });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId." });
+    }
+
+    const tasksClient = await getTasksClient(userId);
+    if (!tasksClient) {
+      return res.status(401).json({ error: "Google account not connected." });
+    }
+
+    const taskId = req.params.taskId;
+    const { status, tasklist } = req.body ?? {};
+    const normalizedStatus = status === "completed" ? "completed" : "needsAction";
+    const targetTasklist =
+      typeof tasklist === "string" && tasklist.trim() ? tasklist : "@default";
+
+    const requestBody =
+      normalizedStatus === "completed"
+        ? { status: "completed", completed: new Date().toISOString() }
+        : { status: "needsAction", completed: null };
+
+    const response = await tasksClient.tasks.patch({
+      tasklist: targetTasklist,
+      task: taskId,
+      requestBody,
+    });
+
+    return res.json({ item: response.data });
+  } catch (error) {
+    console.error("Failed to update Google Task", error);
+    return res.status(500).json({ error: "Failed to update task." });
+  }
+});
+
 export { googleCalendarRouter };

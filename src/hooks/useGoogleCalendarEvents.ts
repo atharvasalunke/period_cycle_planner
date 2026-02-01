@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addDays,
   endOfDay,
@@ -109,6 +109,11 @@ export const useGoogleCalendarEvents = (focusMonth: Date) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refresh = useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, []);
 
   const range = useMemo(() => {
     const monthStart = startOfMonth(focusMonth);
@@ -198,7 +203,7 @@ export const useGoogleCalendarEvents = (focusMonth: Date) => {
     };
 
     void fetchEvents();
-  }, [user?.id, range.timeMin, range.timeMax]);
+  }, [user?.id, range.timeMin, range.timeMax, refreshKey]);
 
-  return { events, isLoading, error };
+  return { events, isLoading, error, refresh };
 };

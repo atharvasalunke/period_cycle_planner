@@ -26,6 +26,9 @@ export interface Task {
   dueDate?: Date;
   color?: string;
   createdAt: Date;
+  source?: 'local' | 'google-task';
+  externalId?: string;
+  externalListId?: string;
 }
 
 // Quick todo (no deadline)
